@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Aether extension will be documented in this file.
+All notable changes to Aether Prompt Generator will be documented in this file.
 
 ## [2.0.0] - 2026-03-04
 
@@ -66,7 +66,7 @@ Aether no longer requires Ollama. Everything runs locally with a bundled GGUF mo
 ## [1.0.0] - 2026-02-07
 
 ### Added
-- Initial release of Aether — AI Prompt Optimizer
+- Initial release of Aether Prompt Generator
 - Vibe-to-prompt generation with local AI model
 - Smart project context scanning (files, structure, tech stack)
 - Multi-IDE support: Cursor, Windsurf, Claude Code, GitHub Copilot, VS Code

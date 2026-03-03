@@ -1,4 +1,4 @@
-# Aether — AI Prompt Optimizer
+# Aether Prompt Generator
 
 > Transform rough ideas into perfect AI prompts. 100% local, no API keys needed — your data stays private.
 
@@ -7,9 +7,9 @@
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-blue?logo=buymeacoffee&logoColor=white)](https://www.buymeacoffee.com/AhmetKayraKama)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/Jorji49)
 
-## What is Aether?
+## What is Aether Prompt Generator?
 
-Aether turns your rough ideas into production-ready AI prompts. Type something like *"create a login page with OAuth"* and get a structured, context-aware prompt optimized for your target AI agent — all running **100% locally** on your machine.
+Aether Prompt Generator turns your rough ideas into production-ready AI prompts. Type something like *"create a login page with OAuth"* and get a structured, context-aware prompt optimized for your target AI agent — all running **100% locally** on your machine.
 
 **No API keys. No cloud. No data leaves your computer.**
 
