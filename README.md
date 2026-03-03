@@ -1,97 +1,138 @@
-# Aether - AI Prompt Optimizer
+# Aether — AI Prompt Optimizer
 
-Transform rough ideas ("vibes") into perfect, AI-optimized prompts. Powered by **local Ollama models** — your data stays private.
+> Transform rough ideas into perfect AI prompts. 100% local, no API keys needed — your data stays private.
+
+![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/AhmetKayraKama.aether-prompt-generator)
+![License](https://img.shields.io/github/license/Jorji49/aether)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-blue?logo=buymeacoffee&logoColor=white)](https://www.buymeacoffee.com/AhmetKayraKama)
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/Jorji49)
+
+## What is Aether?
+
+Aether turns your rough ideas into production-ready AI prompts. Type something like *"create a login page with OAuth"* and get a structured, context-aware prompt optimized for your target AI agent — all running **100% locally** on your machine.
+
+**No API keys. No cloud. No data leaves your computer.**
 
 ## Features
 
-- **AI-Specific Optimization**: Tailored prompts for Claude, GPT, Gemini, Grok, and Codex
-- **100% Local & Private**: Uses Ollama — no data leaves your machine
-- **Context-Aware**: Scans your workspace to generate project-specific prompts
-- **Security-First**: Built-in prompt injection detection and OWASP compliance
-- **Fast**: Generate prompts in <1 second with small models
-- **Quality Scoring**: Automatic quality assessment of generated prompts
+- **Vibe-to-Prompt** — Type a rough idea, get a fully structured AI prompt in seconds
+- **100% Local & Private** — Runs entirely on your machine using a local GGUF model (~1.2 GB)
+- **Plug & Play** — Installs with one click. Python backend and model download automatically on first use
+- **Streaming Output** — Watch your prompt being generated token-by-token in real time
+- **Multi-IDE Support** — Works with Cursor, Windsurf, Claude Code, GitHub Copilot, and VS Code
+- **Smart Context Scanning** — Automatically analyzes your project structure, languages and tech stack
+- **Language Selector** — Choose target languages (Python, TypeScript, Go, Rust…) for more accurate prompts
+- **Agent Selector** — Pick your target AI (Claude, GPT, Gemini, Grok, Codex) for optimized prompt formatting
+- **Quality Scoring** — Every prompt gets a quality grade (A+ to D) with a score
+- **Security Auditing** — Prompts are checked for injection risks and sensitive data leaks
+- **Model Management** — Download, switch, and manage local GGUF models from the sidebar
+- **Send to Agent** — One click sends the generated prompt directly to your IDE's AI assistant
 
 ## Quick Start
 
 ### Prerequisites
 
-1. Install [Ollama](https://ollama.ai)
-2. Pull a model: `ollama pull gemma2:2b` (recommended starter model)
+- **Python 3.10+** — [Download](https://www.python.org/downloads/) (check "Add to PATH" during install)
+- **16 GB RAM recommended** (8 GB minimum)
 
-### Installation
+> **That's it.** No Ollama, no Docker, no external services needed.
 
-1. Install from VS Code Marketplace: Search "Aether" or [click here](https://marketplace.visualstudio.com/items?itemName=AhmetKayraKama.aether-prompt-generator)
-2. Start the Aether Brain backend:
-   ```bash
-   cd brain
-   pip install -r requirements.txt
-   python sslm_engine.py
-   ```
-3. Open Aether sidebar in VS Code (brain icon in activity bar)
+### Setup
 
-### Usage
+1. Install **Aether** from the VS Code Marketplace
+2. Open any project folder
+3. Click the **Aether** icon in the Activity Bar (left sidebar)
+4. Aether will automatically:
+   - Start the Brain server in the background
+   - Install Python dependencies
+   - Download a local AI model (~1.2 GB, one-time)
+5. Start typing your ideas!
 
-1. Type your rough idea in the "Vibe" input (e.g., "create a REST API for user auth")
-2. Select target AI (Claude, GPT, Gemini, etc.)
-3. Click "Generate Prompt"
-4. Copy optimized prompt and paste into your AI tool
+## How It Works
 
-### Example
-
-**Input (Vibe):** `create a secure REST API for user authentication`
-
-**Output:**
-
-```xml
-<role>
-Senior Backend Engineer specializing in API design. 10+ years production experience...
-</role>
-
-<objective>
-Create a secure REST API for user authentication with JWT tokens...
-</objective>
-
-<security>
-- Use bcrypt/argon2 for password hashing
-- Implement rate limiting on auth endpoints
-- CSRF protection for state-changing operations
-</security>
 ```
+Your Idea → Aether Brain → Local LLM (GGUF) → Optimized Prompt → Your AI Agent
+```
+
+1. **You type** a rough idea in the Aether sidebar
+2. **Context Scanner** analyzes your project (files, structure, tech stack, languages)
+3. **Prompt Optimizer** crafts a detailed, structured prompt using the local LLM
+4. **Quality Auditor** scores the output and checks for security issues
+5. **One click** sends the prompt to your AI agent (Cursor, Copilot, Claude, etc.)
 
 ## Configuration
 
-Access via VS Code Settings (`Cmd/Ctrl + ,` → search "Aether"):
-
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Ollama Model | `gemma2:2b` | Change to `phi4` for higher quality |
-| Brain Server URL | `http://127.0.0.1:8420` | Only change if running Brain remotely |
-| Max Context Files | `30` | How many project files to scan (20–50 recommended) |
-| Temperature | `0.1` | 0.1 for coding (focused), 0.7 for creative tasks |
-| Auto Send to Agent | `false` | Automatically send generated prompt to AI agent |
+| `aether.brainServerUrl` | `http://127.0.0.1:8420` | Brain server URL |
+| `aether.model` | `llama3.2-1b` | Local GGUF model for prompt generation |
+| `aether.maxContextFiles` | `30` | Max project files to scan for context |
+| `aether.autoSendToAgent` | `false` | Auto-send prompt to AI agent after generation |
+| `aether.temperature` | `0.1` | Generation temperature (0.0–1.0) |
+| `aether.maxTokens` | `2048` | Max tokens for generated prompts |
 
-## Quality Scoring
+## Available Models
 
-Every generated prompt is scored across 5 dimensions:
+| Model | Size | Speed | Quality | Notes |
+|-------|------|-------|---------|-------|
+| **llama3.2-1b** | 1.3 GB | ⚡⚡⚡⚡ | ⭐⭐ | Default — fast, low RAM |
+| **llama3.2-3b** | 2.0 GB | ⚡⚡⚡ | ⭐⭐⭐ | Recommended for quality |
+| **phi3.5-mini** | 2.4 GB | ⚡⚡ | ⭐⭐⭐⭐ | Best reasoning |
+| **gemma2-2b** | 1.6 GB | ⚡⚡⚡ | ⭐⭐⭐ | Strong multilingual |
 
-- **Role Clarity**: Expert persona definition
-- **Task Clarity**: Clear, actionable objectives
-- **Structure**: Logical organization
-- **Security**: OWASP compliance, input validation
-- **Actionability**: Specific, executable instructions
+Models are downloaded automatically to `~/.aether/models/` on first use. You can switch models from the sidebar.
 
-Grade scale: **A+** (90+), **A** (80–89), **B** (70–79), **C** (60–69), **D** (<60)
+## Privacy
 
-## Security
+- **Zero cloud dependency** — All processing happens on your local machine
+- **No telemetry** — We don't collect any usage data
+- **No API keys needed** — Works entirely with a bundled local model
+- **Your code stays yours** — Context scanning never leaves your machine
+- **Models stored locally** — In `~/.aether/models/`, you own everything
 
-- **Local-first**: No cloud APIs, no telemetry
-- **Prompt injection detection**: Built-in safety checks
-- **Rate limiting**: 30 requests/minute to prevent abuse
-- **CORS restricted**: localhost + VS Code webviews only
+## Architecture
 
-## License
+```
+aether/
+├── brain/                        # Python backend (bundled)
+│   ├── sslm_engine.py            # FastAPI server
+│   ├── llm_backend.py            # Local GGUF model management
+│   ├── prompt_optimizer.py       # Prompt generation engine
+│   ├── prompt_knowledge_base.py  # Best practices & patterns
+│   ├── context_scanner.py        # Project analysis
+│   ├── security_auditor.py       # Security checks
+│   └── config.py                 # Configuration
+└── extension/                    # VS Code extension (TypeScript)
+    └── src/
+        ├── extension.ts               # Entry point + auto-start
+        ├── providers/SidebarProvider.ts # UI + streaming
+        ├── services/BrainClient.ts     # HTTP client
+        └── utils/config.ts            # Settings
+```
 
-MIT License — see [LICENSE.md](LICENSE.md)
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `Aether: Send Vibe` | Enter a prompt idea via input box |
+| `Aether: Start Brain` | Start the local Brain server |
+| `Aether: Send to Agent` | Send a prompt to your AI assistant |
+
+## Troubleshooting
+
+### Brain server won't start
+- Make sure Python 3.10+ is installed: `python --version`
+- Check if port 8420 is available
+- Try restarting VS Code
+
+### Model download stuck
+- Check your internet connection (model downloads from HuggingFace)
+- Models are cached in `~/.aether/models/` — delete the folder to re-download
+
+### Extension shows "Offline"
+- The Brain auto-starts on activation. Wait 10-15 seconds for first-time setup
+- Check the **"Aether Brain"** terminal in VS Code for errors
+- The extension auto-discovers ports 8420–8429
 
 ## Support
 
@@ -101,12 +142,6 @@ If you find Aether useful, consider supporting the project:
 
 [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/Jorji49)
 
-## Acknowledgments
+## License
 
-Built on top of:
-
-- [llama-cpp-python](https://github.com/abetlhen/llama-cpp-python) — Local GGUF inference
-- [FastAPI](https://fastapi.tiangolo.com) — Backend framework
-- Prompt patterns from [prompts.chat](https://prompts.chat) community
-
-Made with ❤️ by [Ahmet Kayra Kama](https://github.com/Jorji49)
+[MIT](LICENSE.md) — Made by [Ahmet Kayra Kama](https://github.com/Jorji49)
