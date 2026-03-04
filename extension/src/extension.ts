@@ -42,18 +42,18 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("aether.startBrain", async () => {
-      // Find brain folder — search bundled, workspace, and parent locations
+      // Find brain folder — search workspace first (dev), then bundled, then others
       let brainPath = "";
       const hasBrain = (dir: string) => fs.existsSync(path.join(dir, "sslm_engine.py"));
 
-      // 1. Bundled inside extension package (marketplace install)
-      const bundled = path.join(context.extensionUri.fsPath, "brain");
-      if (hasBrain(bundled)) { brainPath = bundled; }
+      // 1. Workspace folder (development — always prefer this for fresh code)
+      const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (ws && hasBrain(path.join(ws, "brain"))) { brainPath = path.join(ws, "brain"); }
 
-      // 2. Workspace folder (development)
+      // 2. Bundled inside extension package (marketplace install)
       if (!brainPath) {
-        const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (ws && hasBrain(path.join(ws, "brain"))) { brainPath = path.join(ws, "brain"); }
+        const bundled = path.join(context.extensionUri.fsPath, "brain");
+        if (hasBrain(bundled)) { brainPath = bundled; }
       }
 
       // 3. Sibling of extension (monorepo)
@@ -107,15 +107,28 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      // Reuse Aether Brain terminal if already open (avoid duplicate servers)
+      // Kill existing Aether Brain terminal to avoid stale sessions / port conflicts
       const existing = vscode.window.terminals.find(t => t.name === "Aether Brain");
-      const terminal = existing ?? vscode.window.createTerminal({ name: "Aether Brain" });
+      if (existing) { existing.dispose(); }
+      // Small delay to let the old terminal fully close before creating a new one
+      await new Promise(r => setTimeout(r, 500));
+      const terminal = vscode.window.createTerminal({ name: "Aether Brain" });
 
       const isWin = process.platform === "win32";
       const sep = isWin ? " ; " : " && ";
       const cdCmd = isWin ? `cd "${brainPath}"` : `cd '${brainPath}'`;
-      // Install deps quietly, then start — model auto-downloads if needed
-      terminal.sendText(`${cdCmd}${sep}${pythonCmd} -m pip install -r requirements.txt --quiet${sep}${pythonCmd} sslm_engine.py`);
+      // Check if deps are already installed before running pip install (much faster restart)
+      const depCheck = `${pythonCmd} -c "import fastapi, llama_cpp"`;
+      const pipInstall = `${pythonCmd} -m pip install -r requirements.txt --quiet`;
+      const startCmd = `${pythonCmd} sslm_engine.py`;
+      if (isWin) {
+        // PowerShell: check exit code properly — try/catch doesn't catch non-terminating errors
+        terminal.sendText(`${cdCmd} ; ${depCheck} 2>$null ; if ($LASTEXITCODE -ne 0) { ${pipInstall} } ; ${startCmd}`);
+      } else {
+        // Bash: short-circuit — only pip install if import fails
+        terminal.sendText(`${cdCmd} && (${depCheck} 2>/dev/null || ${pipInstall}) && ${startCmd}`);
+      }
+      terminal.show(true); // Show terminal so user can see startup progress
       sidebarProvider.updateBrainStatus(false, true);
     })
   );
@@ -123,6 +136,39 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("aether.sendToAgent", async (prompt: string) => {
       await sendPromptToAgent(prompt);
+    })
+  );
+
+  // ── Generate from Selection ───────────────────────────────────────
+  context.subscriptions.push(
+    vscode.commands.registerCommand("aether.generateFromSelection", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage("Aether: No active editor.");
+        return;
+      }
+      const sel = editor.selection;
+      const text = editor.document.getText(sel);
+      const fileName = editor.document.fileName.split(/[\\/]/).pop() ?? "file";
+      const lang = editor.document.languageId;
+
+      let prefill: string;
+      if (text.trim()) {
+        prefill = `Regarding this ${lang} code from ${fileName}:\n\`\`\`${lang}\n${text.slice(0, 3000)}\n\`\`\`\n`;
+      } else {
+        // No selection — just open the sidebar with file context hint
+        prefill = `Regarding ${fileName} (${lang}):\n`;
+      }
+
+      // Focus the sidebar and prefill — retry until webview is ready
+      await vscode.commands.executeCommand("aether.vibePanel.focus");
+      const maxWait = 3000;
+      const step = 200;
+      for (let waited = 0; waited < maxWait; waited += step) {
+        await new Promise(r => setTimeout(r, step));
+        if ((sidebarProvider as any)._view) { break; }
+      }
+      sidebarProvider.prefillInput(prefill);
     })
   );
 

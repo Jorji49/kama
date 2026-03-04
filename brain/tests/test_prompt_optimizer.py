@@ -25,13 +25,17 @@ class TestBuildOptimizedPrompt:
         assert len(result) > 100
         assert "REST API" in result
 
-    def test_claude_family_uses_xml(self) -> None:
+    def test_claude_family_natural_language(self) -> None:
         result = build_optimized_prompt(vibe="build a login page", family="claude")
-        assert "<system>" in result or "<task>" in result or "<role>" in result
+        # Claude prompts now use natural language style, not XML tags
+        assert "You are" in result
+        assert len(result) > 100
 
-    def test_gpt_family_uses_markdown(self) -> None:
+    def test_gpt_family_natural_language(self) -> None:
         result = build_optimized_prompt(vibe="build a dashboard", family="gpt")
-        assert "##" in result or "**" in result
+        # GPT prompts now use natural language style, not markdown headers
+        assert "You are" in result
+        assert len(result) > 100
 
     def test_grok_family_is_concise(self) -> None:
         result = build_optimized_prompt(vibe="make a button", family="grok")
@@ -108,17 +112,20 @@ Provide complete source code with tests."""
     def test_empty_prompt_scores_low(self) -> None:
         score = score_prompt_quality("do thing")
         assert score.total_score < 30
-        assert score.grade == "D"
+        assert score.grade == "B-"  # Lowest grade in current scale
 
     def test_grade_boundaries(self) -> None:
-        # Just verify grade computation
+        # Verify grade computation matches current scale (A+, A, B+, B, B-)
         from prompt_optimizer import QualityScore
         q = QualityScore(total_score=95, role_score=20, task_clarity_score=20,
                          structure_score=20, security_score=20, actionability_score=15)
         assert q.grade == "A+"
         q2 = QualityScore(total_score=55, role_score=10, task_clarity_score=10,
                           structure_score=10, security_score=10, actionability_score=15)
-        assert q2.grade == "D"
+        assert q2.grade == "B+"
+        q3 = QualityScore(total_score=20, role_score=5, task_clarity_score=5,
+                          structure_score=5, security_score=5, actionability_score=0)
+        assert q3.grade == "B-"
 
 
 class TestLanguageSecurityRules:

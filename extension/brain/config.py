@@ -22,13 +22,13 @@ if _ENV_PATH.exists():
 class Settings:
     """Runtime settings resolved at import time from environment variables.
 
-    Note: OLLAMA_MODEL may be changed at runtime via the /model endpoint.
+    Note: AETHER_MODEL may be changed at runtime via the /model endpoint.
     All other fields should be treated as read-only after initialization.
     """
 
     # ── Aether LLM (llama-cpp-python, GGUF) ───────────────────────────
     # Model id from llm_backend.GGUF_CATALOG (e.g. "llama3.2-3b", "phi3.5-mini")
-    AETHER_MODEL: str = os.getenv("AETHER_MODEL", "llama3.2-3b")
+    AETHER_MODEL: str = os.getenv("AETHER_MODEL", "llama3.2-1b")
 
     # Max tokens for generated prompts.
     # 2048 = good balance for most tasks. Increase for complex architecture prompts.

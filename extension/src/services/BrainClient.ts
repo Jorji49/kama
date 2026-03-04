@@ -161,8 +161,8 @@ export class BrainClient {
     }
   }
 
-  public async sendVibe(vibe: string, workspacePath: string, agent: string = "auto"): Promise<PromptResponse> {
-    return this._fetchTracked<PromptResponse>("POST", "/vibe", { vibe, workspace_path: workspacePath, agent });
+  public async sendVibe(vibe: string, workspacePath: string, agent: string = "auto", chainContext: string = "", activeFile: string = "", activeFileName: string = "", activeFileLang: string = ""): Promise<PromptResponse> {
+    return this._fetchTracked<PromptResponse>("POST", "/vibe", { vibe, workspace_path: workspacePath, agent, chain_context: chainContext, active_file: activeFile, active_file_name: activeFileName, active_file_language: activeFileLang });
   }
 
   /**
@@ -173,11 +173,14 @@ export class BrainClient {
     vibe: string,
     workspacePath: string,
     agent: string,
-    languages: string[],
-    onEvent: StreamCallback
+    onEvent: StreamCallback,
+    chainContext: string = "",
+    activeFile: string = "",
+    activeFileName: string = "",
+    activeFileLang: string = ""
   ): () => void {
     const url = new URL(this._baseUrl + "/vibe/stream");
-    const payload = JSON.stringify({ vibe, workspace_path: workspacePath, agent, languages });
+    const payload = JSON.stringify({ vibe, workspace_path: workspacePath, agent, chain_context: chainContext, active_file: activeFile, active_file_name: activeFileName, active_file_language: activeFileLang });
 
     const options: http.RequestOptions = {
       hostname: url.hostname,
@@ -210,6 +213,7 @@ export class BrainClient {
           if (!line.startsWith("data: ")) { continue; }
           try {
             const data = JSON.parse(line.slice(6));
+            if (doneSeen) { continue; } // skip events after terminal event (prevents duplicates)
             if (data.type === "done" || data.type === "error" || data.type === "fallback") {
               doneSeen = true;
               clearTimeout(watchdog);

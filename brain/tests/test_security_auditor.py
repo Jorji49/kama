@@ -87,7 +87,7 @@ class TestVibeLength:
     """Excessively long vibe detection."""
 
     def test_long_vibe_warned(self) -> None:
-        report = audit_vibe("x" * 5000)
+        report = audit_vibe("x" * 13000)
         assert report.verdict == Verdict.WARN
         assert any(f.rule == "vibe_too_long" for f in report.findings)
 

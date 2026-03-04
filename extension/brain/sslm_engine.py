@@ -107,13 +107,13 @@ def _check_rate(key: str, limit: int) -> bool:
 # ── Agent guides (reinforcement lines for llama — injected after system prompt) ──
 
 _GUIDES: dict[str, str] = {
-    "claude": "TARGET AI: Claude (Anthropic). USE XML TAGS. Include <constraints>, <edge_cases>, <security>. Be explicit and thorough.",
-    "gpt": "TARGET AI: GPT (OpenAI). USE MARKDOWN. Start with 'You are...'. Use ## headers, bullet points, bold **keywords**.",
-    "gpt-codex": "TARGET AI: GPT Codex (OpenAI). SPECIFICATION ONLY. Include file paths, type signatures, test cases. No prose.",
-    "gemini": "TARGET AI: Gemini (Google). USE TABLES + STEP-BY-STEP. Include reasoning checkpoints. Be thorough.",
-    "grok": "TARGET AI: Grok (xAI). BE CONCISE AND DIRECT. Under 500 words. Every word must earn its place.",
-    "o3": "TARGET AI: OpenAI o3/o4 (Reasoning model). CHAIN-OF-THOUGHT REQUIRED. Use <thinking> blocks. Be exhaustive in reasoning steps. Include verification steps.",
-    "auto": "TARGET: Any AI coding agent. Use clear markdown structure with ## headers.",
+    "claude": "TARGET: Claude. Write a clean natural-language prompt — no XML templates, no scaffolding.",
+    "gpt": "TARGET: GPT. Write a clean natural-language prompt — no markdown headers, no template structure.",
+    "gpt-codex": "TARGET: Codex. Write a clean technical spec in natural prose — no scaffolding.",
+    "gemini": "TARGET: Gemini. Write a clean natural-language prompt — thorough but no tables or scaffolding.",
+    "grok": "TARGET: Grok. Ultra-concise, under 300 words. No templates.",
+    "o3": "TARGET: o3/o4. Encourage deep reasoning naturally. No template scaffolding.",
+    "auto": "Write a clean, natural-language prompt for any AI. No templates, no scaffolding, no headers.",
 }
 
 # ── Task type → adaptive temperature map ─────────────────────────────
@@ -191,7 +191,10 @@ class VibeRequest(BaseModel):
     vibe: str = Field(..., min_length=1, max_length=16384)
     workspace_path: str = Field("", max_length=4096)
     agent: str = Field("auto", max_length=64)
-    languages: list[str] = Field(default_factory=list)
+    chain_context: str = Field("", max_length=32768)
+    active_file: str = Field("", max_length=65536)
+    active_file_name: str = Field("", max_length=512)
+    active_file_language: str = Field("", max_length=64)
 
     @field_validator('agent')
     @classmethod
@@ -199,12 +202,6 @@ class VibeRequest(BaseModel):
         allowed = set(_GUIDES.keys()) | {'auto'}
         normalized = v.lower().strip()
         return normalized if normalized in allowed else 'auto'
-
-    @field_validator('languages')
-    @classmethod
-    def validate_languages(cls, v: list[str]) -> list[str]:
-        _LANG_RE = re.compile(r'^[a-zA-Z0-9+#./\-][a-zA-Z0-9+#./\- ]{0,62}$')
-        return [l.strip() for l in v[:10] if l.strip() and _LANG_RE.match(l.strip())]
 
 
 class PromptResponse(BaseModel):
@@ -296,7 +293,7 @@ async def hardware_profile(request: Request):
 
 @app.get("/agents")
 async def list_agents():
-    return {"families": [{"id": k, "name": v} for k, v in _FAMILY_NAMES.items()]}
+    return {"agents": [{"id": k, "name": v} for k, v in _FAMILY_NAMES.items()]}
 
 
 class ContextRequest(BaseModel):
@@ -549,21 +546,33 @@ async def vibe_stream(req: VibeRequest, request: Request):
     async def _stream_gen():
         t0 = time.monotonic()
         user_msg = req.vibe.strip()
-        # User-selected languages take priority over auto-detected ctx_hint
-        if req.languages:
-            user_msg += f"\n[Languages: {', '.join(req.languages)}]"
-            if ctx_hint:
-                user_msg += f"\n[Stack: {ctx_hint}]"
-        elif ctx_hint:
-            user_msg += f"\n[Tech: {ctx_hint}]"
+
+        # Add tech stack context to system prompt if detected
+        tech_context = ""
+        if ctx_hint:
+            tech_context = f"\nDetected project tech stack: {ctx_hint}.\nMention these technologies in the context/tech-stack section of the prompt, but focus the prompt on what the user is ASKING for."
+
         patterns = get_relevant_patterns(req.vibe)
         pattern_ctx = build_pattern_context(patterns)
         if pattern_ctx:
             user_msg += f"\n{pattern_ctx}"
 
+        # Chain context — previous prompt in a multi-step workflow
+        if req.chain_context:
+            user_msg += f"\n\nPREVIOUS PROMPT IN THIS CHAIN (build upon it, extend or refine — do NOT repeat it verbatim):\n{req.chain_context[:8000]}"
+
+        # Active file context — code from the user's currently open editor
+        if req.active_file:
+            fname = req.active_file_name or "untitled"
+            flang = req.active_file_language or ""
+            snippet = req.active_file[:12000]
+            user_msg += f"\n\nUSER'S CURRENTLY OPEN FILE ({fname}, {flang}):\n```{flang}\n{snippet}\n```\nIncorporate awareness of this code into the prompt when relevant."
+
         system = get_enhanced_system_prompt(category_hint=req.vibe, family=family)
         agent_line = _GUIDES.get(family, _GUIDES["auto"])
         system += "\n" + agent_line
+        if tech_context:
+            system += "\n" + tech_context
 
         temp = _adaptive_temperature(req.vibe)
         max_tokens = _adaptive_tokens(req.vibe)
@@ -574,6 +583,7 @@ async def vibe_stream(req: VibeRequest, request: Request):
         ]
 
         full_text = ""
+        used_fallback = False
         try:
             if not llm_backend.is_loaded():
                 raise RuntimeError("No model loaded")
@@ -591,7 +601,7 @@ async def vibe_stream(req: VibeRequest, request: Request):
                     token_q.put(None)
 
             import concurrent.futures
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             fut = loop.run_in_executor(None, _run_stream)
 
             while True:
@@ -608,18 +618,21 @@ async def vibe_stream(req: VibeRequest, request: Request):
         except Exception as e:
             log.error("[%s] Stream error: %s", request_id, e)
             full_text = _fallback(req.vibe, ctx_hint, family)
-            yield "data: " + json.dumps({"type": "fallback", "text": full_text}) + SEP
+            used_fallback = True
 
+        full_text = _clean(full_text)
         full_text, _ = sanitize_generated_prompt(full_text)
         quality = score_prompt_quality(full_text)
-        if quality.total_score < 40 and len(full_text) > 20:
+        # Only fall back to template for truly degenerate output (empty/gibberish)
+        if quality.total_score < 5 and len(full_text.strip()) < 10:
             full_text = build_optimized_prompt(vibe=req.vibe, family=family, tech_stack=ctx_hint)
             quality = score_prompt_quality(full_text)
+            used_fallback = True
 
         fp = fingerprint_prompt(full_text)
         ms = int((time.monotonic() - t0) * 1000)
         done_payload = {
-            "type": "done",
+            "type": "fallback" if used_fallback else "done",
             "prompt": full_text,
             "ms": ms,
             "model": llm_backend.current_model(),
@@ -675,7 +688,7 @@ async def vibe(req: VibeRequest, request: Request) -> PromptResponse:
         log.warning("[%s] Rejected workspace path: %s", request_id, req.workspace_path[:100])
 
     # ── 3. Generate prompt (AI-specific) ─────────────────────────────
-    prompt = await _gen(req.vibe, ctx_hint, family, req.languages)
+    prompt = await _gen(req.vibe, ctx_hint, family)
 
     # ── 4. Sanitize generated prompt ─────────────────────────────────
     prompt, sanitize_issues = sanitize_generated_prompt(prompt)
@@ -686,7 +699,7 @@ async def vibe(req: VibeRequest, request: Request) -> PromptResponse:
     quality = score_prompt_quality(prompt)
 
     # If quality is too low and model generated something, use optimized fallback
-    if quality.total_score < 40 and len(prompt) > 20:
+    if quality.total_score < 20 and len(prompt) > 20:
         log.warning("Quality too low (%.0f), upgrading with optimizer", quality.total_score)
         lang_hint = ctx_hint.split("/")[0].strip() if ctx_hint else ""
         prompt = build_optimized_prompt(
@@ -725,15 +738,14 @@ async def vibe(req: VibeRequest, request: Request) -> PromptResponse:
 # Quality scorer ensures minimum quality threshold.
 
 
-async def _gen(vibe: str, ctx_hint: str, family: str, languages: list[str] | None = None) -> str:
+async def _gen(vibe: str, ctx_hint: str, family: str) -> str:
     """Generate AI-optimized prompt. Each family gets tailored instructions."""
     user_msg = vibe.strip()
-    if languages:
-        user_msg += f"\n[Languages: {', '.join(languages)}]"
-        if ctx_hint:
-            user_msg += f"\n[Stack: {ctx_hint}]"
-    elif ctx_hint:
-        user_msg += f"\n[Tech: {ctx_hint}]"
+
+    # Add tech stack context to system prompt if detected
+    tech_context = ""
+    if ctx_hint:
+        tech_context = f"\nDetected project tech stack: {ctx_hint}.\nMention these technologies in the context/tech-stack section of the prompt, but focus the prompt on what the user is ASKING for."
 
     # Find relevant patterns from knowledge base
     patterns = get_relevant_patterns(vibe)
@@ -745,6 +757,8 @@ async def _gen(vibe: str, ctx_hint: str, family: str, languages: list[str] | Non
     system = get_enhanced_system_prompt(category_hint=vibe, family=family)
     agent_line = _GUIDES.get(family, _GUIDES["auto"])
     system += "\n" + agent_line
+    if tech_context:
+        system += "\n" + tech_context
 
     messages = [
         {"role": "system", "content": system},
@@ -783,13 +797,16 @@ async def _gen(vibe: str, ctx_hint: str, family: str, languages: list[str] | Non
 
 
 def _clean(text: str) -> str:
-    """Strip fences, preambles, trailing artifacts."""
+    """Strip fences, preambles, trailing artifacts, cursor blocks."""
     text = re.sub(r"```[\w]*\n?", "", text).strip()
     text = re.sub(
         r"^(Here is|Here's|Below is|The following|Sure|Okay|Of course|Certainly|I'll)[^\n]*\n+",
         "", text, flags=re.IGNORECASE
     ).strip()
     text = re.sub(r"\n*(END EXAMPLE|END|---)\s*$", "", text).strip()
+    # Strip llama-cpp cursor block characters and other Unicode artifacts
+    text = re.sub(r"[\u2580-\u259F]+\s*$", "", text).strip()
+    text = text.rstrip("\u258c\u2588\u2592\u2591\u2593")
     return text
 
 

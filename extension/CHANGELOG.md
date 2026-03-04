@@ -2,6 +2,42 @@
 
 All notable changes to Aether Prompt Generator will be documented in this file.
 
+## [2.1.0] - 2026-03-04
+
+### Added
+- **Prompt History & Favorites** — Full history view with search, star/unstar favorites, delete items. Persistent across sessions (up to 100 entries)
+- **Prompt Chains** — Chain prompts together for multi-step workflows. Click 🔗 Chain on any prompt, then your next vibe builds on the previous one
+- **Active File Context** — Aether reads your currently open file and sends it to the brain for more relevant, context-aware prompts
+- **Keyboard Shortcut** — `Ctrl+Shift+A` (`Cmd+Shift+A` on Mac) generates a prompt from your current file or selection
+- **Onboarding Tutorial** — 4-slide walkthrough shown on first launch
+- **Clipboard toast** — Visual feedback when copying prompts from history
+
+### Changed
+- **System prompts rewritten** — All AI family prompts now use natural language style (no XML, no templates, no scaffolding)
+- **Quality fallback threshold** — Only truly empty/degenerate LLM output triggers template fallback (previously too aggressive, replacing good LLM output with rigid templates)
+- **Streaming events** — Backend now sends exactly one terminal event per stream (prevents history duplication)
+- **Hardware profiler** — Model names now match the GGUF catalog IDs (llama3.2-1b, llama3.2-3b, gemma2-2b)
+- **Default model** — Config default aligned to `llama3.2-1b` across all files
+- **Python compat** — `asyncio.get_event_loop()` → `asyncio.get_running_loop()` for Python 3.12+ compatibility
+
+### Fixed
+- **History duplication** — Backend was sending both `fallback` and `done` events on error, causing double entries
+- **History duplication on restore** — Session restore no longer re-saves items to persistent history
+- **Chain button permanently dead** — `btn-ok` CSS `pointer-events:none` was never reset; now resets after 2s
+- **Send to Agent button permanently dead** — Same root cause and fix as Chain button
+- **Chain X not clearing backend** — Clicking X on chain bar now properly resets `_chainContext`
+- **Chain bar stays visible** — Auto-hides after vibe is sent
+- **Chain context lost on error** — Chain context now consumed only on stream success
+- **Event handler leak** — `onDidChangeActiveTextEditor` now properly disposed on view dispose
+- **Prefill race condition** — Retry loop (up to 3s) instead of fixed 300ms delay
+- **Invisible status dot** — Blue background during "starting" state (was invisible due to missing CSS)
+- **PowerShell dep check** — Uses `$LASTEXITCODE` instead of try/catch (catches non-terminating errors)
+
+### Removed
+- **Dead code** — Removed legacy `deep_review_with_sslm()` function and all Ollama references from security auditor
+- **Dead variable** — Removed unused `_restoring` variable from webview restore handler
+- **Language selector** — Removed in favor of automatic language detection from project context
+
 ## [2.0.0] - 2026-03-04
 
 ### ⚡ Major — 100% Local, Zero Dependencies

@@ -77,45 +77,25 @@ AI_PROFILES: dict[str, AIProfile] = {
         max_recommended_tokens=8192,
         prefers_concise=False,
         structure_template="""\
-<system>
-<role>{role}</role>
-<expertise>{expertise}</expertise>
-</system>
+You are {role}. {expertise}
 
-<context>
-<project_type>{project_type}</project_type>
-<tech_stack>{tech_stack}</tech_stack>
-<constraints>
-{constraints}
-</constraints>
-</context>
+Project context: {project_type} using {tech_stack}.
 
-<task>
-<objective>{objective}</objective>
-<requirements>
+{objective}
+
+Requirements:
 {requirements}
-</requirements>
-<deliverables>
+
+Constraints:
+{constraints}
+
+Deliverables:
 {deliverables}
-</deliverables>
-</task>
 
-<quality_gates>
+Quality expectations:
 {quality_gates}
-</quality_gates>
 
-<output_format>
-{output_format}
-</output_format>
-
-<security_requirements>
-- Never output credentials, API keys, or secrets in generated code
-- Always sanitize user inputs before processing
-- Use parameterized queries for all database operations
-- Implement proper authentication and authorization checks
-- Follow the principle of least privilege
-- Never use eval(), exec(), or dynamic code execution with user input
-</security_requirements>""",
+Security: Validate all inputs, use parameterized queries, never hardcode secrets, follow OWASP Top 10 guidelines. {output_format}""",
         security_constraints=(
             "Never output credentials, API keys, or secrets in generated code",
             "Always sanitize user inputs before processing",
@@ -150,37 +130,25 @@ AI_PROFILES: dict[str, AIProfile] = {
         max_recommended_tokens=4096,
         prefers_concise=False,
         structure_template="""\
-# System Instructions
-
 You are {role}. {expertise}
 
-## Context
-- **Project Type**: {project_type}
-- **Tech Stack**: {tech_stack}
-- **Constraints**: {constraints}
+Project context: {project_type} using {tech_stack}.
 
-## Your Task
 {objective}
 
-### Requirements
+Requirements:
 {requirements}
 
-### Deliverables
+Constraints:
+{constraints}
+
+Deliverables:
 {deliverables}
 
-## Quality Standards
+Quality expectations:
 {quality_gates}
 
-## Output Format
-{output_format}
-
-## Security Requirements
-- Never expose sensitive data (API keys, passwords, tokens) in code output
-- Always validate and sanitize all user inputs
-- Use parameterized queries — never string concatenation for SQL
-- Implement proper error handling without exposing stack traces to users
-- Apply Content Security Policy headers for web applications
-- Use HTTPS for all external communications""",
+Security: Validate and sanitize all inputs, use parameterized queries, never expose secrets in code, implement proper error handling. {output_format}""",
         security_constraints=(
             "Never expose sensitive data in code output",
             "Always validate and sanitize all user inputs",
@@ -215,40 +183,25 @@ You are {role}. {expertise}
         max_recommended_tokens=4096,
         prefers_concise=True,
         structure_template="""\
-# Codex Task
+You are {role}. {expertise}
 
-**Role**: {role}
-**Expertise**: {expertise}
+Project: {project_type} using {tech_stack}.
 
-## Project Context
-```
-Type: {project_type}
-Stack: {tech_stack}
-```
-
-## Objective
 {objective}
 
-## Technical Requirements
+Technical requirements:
 {requirements}
 
-## Expected Files & Signatures
+Expected deliverables:
 {deliverables}
 
-## Quality Checklist
+Quality expectations:
 {quality_gates}
 
-## Security Checklist
-- [ ] All user inputs validated and sanitized
-- [ ] No hardcoded secrets or credentials
-- [ ] SQL injection prevention (parameterized queries)
-- [ ] XSS prevention (output encoding)
-- [ ] CSRF tokens for state-changing endpoints
-- [ ] Rate limiting on sensitive endpoints
-- [ ] Proper authentication/authorization guards
+Constraints:
+{constraints}
 
-## Output
-{output_format}""",
+Security: Validate all inputs, parameterized queries only, no hardcoded secrets, proper auth on every endpoint. {output_format}""",
         security_constraints=(
             "All user inputs validated and sanitized",
             "No hardcoded secrets — use environment variables",
@@ -283,43 +236,27 @@ Stack: {tech_stack}
         max_recommended_tokens=8192,
         prefers_concise=False,
         structure_template="""\
-# Task Definition
+You are {role}. {expertise}
 
-## Role & Expertise
-{role} — {expertise}
+Project context: {project_type} using {tech_stack}.
 
-## Project Context
-| Attribute | Value |
-|-----------|-------|
-| Project Type | {project_type} |
-| Tech Stack | {tech_stack} |
-| Constraints | {constraints} |
+Think through this step by step.
 
-## Objective
 {objective}
 
-## Step-by-Step Plan
-Think through this step by step:
-
-### Requirements
+Requirements:
 {requirements}
 
-### Expected Deliverables
+Deliverables:
 {deliverables}
 
-## Quality Standards
+Constraints:
+{constraints}
+
+Quality expectations:
 {quality_gates}
 
-## Security Standards
-1. Input Validation: Validate type, length, format, and range of all inputs
-2. Authentication: Implement secure session management with proper token handling
-3. Data Protection: Encrypt sensitive data at rest and in transit
-4. Access Control: Implement role-based access control (RBAC)
-5. Error Handling: Use generic error messages for users, detailed logs for developers
-6. Dependencies: Use only trusted, up-to-date packages with known CVE patches
-
-## Output Format
-{output_format}""",
+Security: Validate all inputs, encrypt sensitive data, use parameterized queries, implement proper access control. {output_format}""",
         security_constraints=(
             "Validate type, length, format, and range of all inputs",
             "Implement secure session management",
@@ -352,31 +289,21 @@ Think through this step by step:
         max_recommended_tokens=4096,
         prefers_concise=True,
         structure_template="""\
-**Role**: {role} | {expertise}
+You are {role}. {expertise}
 
-**Context**: {project_type} / {tech_stack}
-{constraints}
+Context: {project_type} using {tech_stack}. {constraints}
 
-**Task**: {objective}
+{objective}
 
-**Requirements**:
+Requirements:
 {requirements}
 
-**Deliver**:
+Deliver:
 {deliverables}
 
-**Quality**:
-{quality_gates}
+Quality: {quality_gates}
 
-**Security**:
-- Sanitize all inputs. No eval/exec with user data.
-- Parameterized queries only. No string concat for SQL.
-- No hardcoded secrets. Use env vars.
-- Validate auth on every protected endpoint.
-- Rate limit sensitive operations.
-
-**Format**:
-{output_format}""",
+Security: Sanitize all inputs, parameterized queries only, no hardcoded secrets, validate auth on every endpoint. {output_format}""",
         security_constraints=(
             "Sanitize all inputs — no eval/exec with user data",
             "Parameterized queries only",
@@ -410,47 +337,24 @@ Think through this step by step:
         max_recommended_tokens=8192,
         prefers_concise=False,
         structure_template="""\
-## Task
+You are {role}. {expertise}
 
-**Role**: {role}
-**Expertise**: {expertise}
+Project: {project_type} using {tech_stack}. {constraints}
 
-## Context
-- **Project Type**: {project_type}
-- **Tech Stack**: {tech_stack}
-- **Constraints**: {constraints}
+Think through this problem carefully before responding.
 
-## Objective
 {objective}
 
-## Reasoning Instructions
-Think through this problem carefully before responding:
-
-1. **Understand** the full scope and edge cases
-2. **Plan** the architecture and approach
-3. **Validate** each requirement against the plan
-4. **Implement** with security and correctness
-5. **Verify** the output meets all requirements
-
-## Requirements
+Requirements:
 {requirements}
 
-## Deliverables
+Deliverables:
 {deliverables}
 
-## Quality & Verification Gates
+Quality expectations:
 {quality_gates}
 
-## Security Requirements
-- Validate all user inputs with strict type checking
-- Use parameterized queries — NEVER string concatenation for SQL
-- No hardcoded secrets — environment variables only
-- Implement proper rate limiting on all endpoints
-- Apply principle of least privilege throughout
-- Verify each security requirement before marking complete
-
-## Output Format
-{output_format}""",
+Security: Validate all inputs with strict type checking, use parameterized queries, no hardcoded secrets, apply principle of least privilege. {output_format}""",
         security_constraints=(
             "Validate all user inputs with strict type checking",
             "Use parameterized queries for all database operations",
@@ -482,37 +386,22 @@ Think through this problem carefully before responding:
         max_recommended_tokens=4096,
         prefers_concise=False,
         structure_template="""\
-## ROLE
-{role}
-{expertise}
+You are {role}. {expertise}
 
-## CONTEXT
-- Project: {project_type}
-- Stack: {tech_stack}
-- Constraints: {constraints}
+Project context: {project_type} using {tech_stack}. {constraints}
 
-## OBJECTIVE
 {objective}
 
-## REQUIREMENTS
+Requirements:
 {requirements}
 
-## DELIVERABLES
+Deliverables:
 {deliverables}
 
-## QUALITY STANDARDS
+Quality expectations:
 {quality_gates}
 
-## SECURITY REQUIREMENTS
-- Sanitize and validate all user inputs
-- Use parameterized queries for database operations
-- Never hardcode credentials or secrets
-- Implement proper authentication and authorization
-- Follow OWASP Top 10 security guidelines
-- Handle errors gracefully without exposing internals
-
-## OUTPUT FORMAT
-{output_format}""",
+Security: Sanitize and validate all inputs, use parameterized queries, never hardcode credentials, implement proper authentication, follow OWASP Top 10 guidelines. {output_format}""",
         security_constraints=(
             "Sanitize and validate all user inputs",
             "Use parameterized queries for database operations",
@@ -732,16 +621,16 @@ class QualityScore:
 
     @property
     def grade(self) -> str:
-        if self.total_score >= 90:
+        if self.total_score >= 80:
             return "A+"
-        elif self.total_score >= 80:
+        elif self.total_score >= 65:
             return "A"
-        elif self.total_score >= 70:
+        elif self.total_score >= 50:
+            return "B+"
+        elif self.total_score >= 35:
             return "B"
-        elif self.total_score >= 60:
-            return "C"
         else:
-            return "D"
+            return "B-"
 
 
 def score_prompt_quality(prompt: str) -> QualityScore:
@@ -771,14 +660,17 @@ def score_prompt_quality(prompt: str) -> QualityScore:
         if indicator in low:
             task_score = min(20.0, task_score + points)
 
-    # 3. Structure (0-20)
+    # 3. Structure (0-20) — reward clean organization, not heavy headers
     structure_score = 0.0
-    # Count headers/sections
-    headers = len(re.findall(r"^#{1,3}\s", prompt, re.M))
-    structure_score += min(10.0, headers * 2.5)
-    # Count numbered/bulleted lists
-    lists = len(re.findall(r"^\s*[-*\d]+[.)]\s", prompt, re.M))
-    structure_score += min(10.0, lists * 1.0)
+    # Paragraphs (2+ newlines = paragraph break)
+    paragraphs = len(re.findall(r"\n\n", prompt))
+    structure_score += min(8.0, paragraphs * 2.0)
+    # Bullet points (light structure)
+    lists = len(re.findall(r"^\s*[-*]\s", prompt, re.M))
+    structure_score += min(8.0, lists * 1.0)
+    # Reasonable length (50-2000 chars is good)
+    if 50 < len(prompt) < 2000:
+        structure_score += 4.0
     structure_score = min(20.0, structure_score)
 
     # 4. Security (0-20)
@@ -796,12 +688,14 @@ def score_prompt_quality(prompt: str) -> QualityScore:
     action_verbs = [
         "implement", "create", "build", "design", "analyze", "review",
         "test", "optimize", "refactor", "deploy", "configure", "integrate",
+        "write", "develop", "handle", "ensure", "follow", "use",
     ]
     found_actions = sum(1 for v in action_verbs if v in low)
-    action_score += min(10.0, found_actions * 2.0)
-    # Numbered steps
-    numbered = len(re.findall(r"^\s*\d+\.\s", prompt, re.M))
-    action_score += min(10.0, numbered * 2.0)
+    action_score += min(15.0, found_actions * 2.5)
+    # Length bonus for substantive prompts
+    word_count = len(prompt.split())
+    if word_count > 30:
+        action_score += 5.0
     action_score = min(20.0, action_score)
 
     total = role_score + task_score + structure_score + security_score + action_score
@@ -875,20 +769,17 @@ def build_optimized_prompt(
         output_format=output_format,
     )
 
-    # Inject language-specific security rules
+    # Inject language-specific security rules as a brief note
     if security_rules:
-        prompt += f"\n\n## Language-Specific Security\n{security_rules}"
+        prompt += f"\n\nLanguage-specific security: {security_rules}"
 
-    # Inject extra rules (e.g. from language security resolver)
+    # Inject extra rules if any
     if extra_rules:
-        prompt += f"\n\n## Additional Security Rules\n{extra_rules}"
+        prompt += f"\n\nAdditional rules: {extra_rules}"
 
     # Inject project context if available
     if project_context:
-        if profile.uses_xml_tags:
-            prompt += f"\n\n<project_context>\n{project_context}\n</project_context>"
-        else:
-            prompt += f"\n\n## Project Context\n{project_context}"
+        prompt += f"\n\nProject details: {project_context}"
 
     # Final sanitization
     prompt, issues = sanitize_generated_prompt(prompt)
@@ -948,64 +839,31 @@ def _build_objective(vibe: str) -> str:
 def _build_requirements(vibe: str, pattern_context: str) -> str:
     """Build requirements from vibe + matched patterns."""
     reqs = [
-        "- Follow clean code principles and industry best practices",
-        "- Include comprehensive error handling and input validation",
-        "- Write self-documenting code with clear naming conventions",
-        "- Implement proper logging for debugging and monitoring",
+        "- Follow clean code principles and best practices",
+        "- Include error handling and input validation",
+        "- Write self-documenting code with clear naming",
     ]
-    if pattern_context:
-        reqs.append(f"- {pattern_context}")
     return "\n".join(reqs)
 
 
 def _build_constraints(vibe: str, tech_stack: str) -> str:
     """Build constraints section."""
-    constraints = [
-        "No placeholder or TODO code — everything must be fully functional",
-        "No hardcoded credentials or configuration values",
-        "No unnecessary dependencies — minimize attack surface",
-        "No deprecated APIs or patterns",
-    ]
-    return "\n".join(f"- {c}" for c in constraints)
+    return "No placeholder code, no hardcoded credentials, no unnecessary dependencies."
 
 
 def _build_deliverables(vibe: str) -> str:
     """Build deliverables list."""
-    deliverables = [
-        "Complete, production-ready source code",
-        "All necessary configuration files",
-        "Clear inline documentation and comments",
-    ]
-    vibe_l = vibe.lower()
-    if any(w in vibe_l for w in ["test", "testing"]):
-        deliverables.append("Comprehensive test suite")
-    if any(w in vibe_l for w in ["api", "endpoint"]):
-        deliverables.append("API documentation with request/response examples")
-    if any(w in vibe_l for w in ["deploy", "docker"]):
-        deliverables.append("Deployment configuration (Dockerfile / docker-compose)")
-    return "\n".join(f"- {d}" for d in deliverables)
+    return "Complete, production-ready code with clear documentation."
 
 
 def _build_quality_gates(language_hint: str) -> str:
     """Build quality gates."""
-    gates = [
-        "- Code passes linting with zero warnings",
-        "- All edge cases handled with appropriate error responses",
-        "- No known security vulnerabilities (OWASP Top 10 compliance)",
-        "- Performance-optimized with no unnecessary computations",
-        "- Follows single responsibility and separation of concerns",
-    ]
-    return "\n".join(gates)
+    return "Clean, linted code with proper error handling, edge case coverage, and OWASP compliance."
 
 
 def _build_output_format(vibe: str) -> str:
     """Build output format instructions."""
-    return (
-        "Provide complete file contents with file paths.\n"
-        "Each file in its own clearly labeled code block.\n"
-        "Start with a brief architectural summary (2-3 sentences).\n"
-        "End with usage instructions."
-    )
+    return "Provide complete, runnable code with brief usage instructions."
 
 
 def _build_security_section(profile: AIProfile, language_hint: str) -> str:

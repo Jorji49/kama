@@ -35,18 +35,17 @@ class ModelSpec:
 
 MODEL_CATALOG: list[ModelSpec] = [
     # Ultra-light (runs on anything)
-    ModelSpec("gemma3:1b",       "Ultra fast — Minimal RAM. Quick iterations.",        "815 MB",  2.0, 0, 1, 5, "general",     ["tiny", "fast"]),
-    ModelSpec("llama3.2:1b",     "Tiny, instant responses. Simple prompts.",            "1.3 GB",  3.0, 0, 1, 5, "general",     ["tiny", "fast"]),
+    ModelSpec("llama3.2-1b",    "Tiny, instant responses. Simple prompts.",            "1.3 GB",  3.0, 0, 1, 5, "general",     ["tiny", "fast"]),
     ModelSpec("deepseek-r1:1.5b","Reasoning-focused. Logic-heavy prompts.",             "1.1 GB",  3.0, 0, 2, 5, "reasoning",   ["tiny", "reasoning"]),
     ModelSpec("qwen2.5:1.5b",    "Efficient multilingual. Turkish/English.",            "986 MB",  2.5, 0, 2, 5, "multilingual",["tiny", "multilingual"]),
 
     # Small (4–6 GB RAM)
     ModelSpec("gemma2:2b",       "Fast — Quick prompt generation, low RAM.",            "1.6 GB",  4.0, 0, 2, 4, "general",     ["small", "balanced"]),
     ModelSpec("codegemma:2b",    "Code specialist. Tech-aware prompts.",                "1.6 GB",  4.0, 0, 2, 4, "code",        ["small", "code"]),
-    ModelSpec("llama3.2:3b",     "Good speed/quality balance.",                         "2.0 GB",  5.0, 0, 2, 4, "general",     ["small", "balanced"]),
+    ModelSpec("llama3.2-3b",    "Good speed/quality balance.",                         "2.0 GB",  5.0, 0, 2, 4, "general",     ["small", "balanced"]),
 
     # Medium (6–10 GB RAM, recommended mainstream)
-    ModelSpec("gemma3:4b",       "⭐ Best Pick — Great quality/speed balance.",         "3.3 GB",  6.0, 0, 4, 3, "general",     ["medium", "recommended", "best-value"]),
+    ModelSpec("gemma2-2b",      "Strong multilingual. Good balance.",                  "1.6 GB",  4.0, 0, 3, 3, "general",     ["medium", "recommended", "best-value"]),
     ModelSpec("deepseek-r1:7b",  "Advanced reasoning. Complex architectures.",          "4.7 GB",  8.0, 0, 4, 2, "reasoning",   ["medium", "reasoning"]),
     ModelSpec("llama3.1:8b",     "Powerful 8B. Excellent quality, needs 8GB+ RAM.",     "4.7 GB",  8.0, 0, 4, 2, "general",     ["medium", "quality"]),
     ModelSpec("mistral",         "Versatile 7B. Reliable quality.",                     "4.1 GB",  7.0, 0, 3, 3, "general",     ["medium", "versatile"]),

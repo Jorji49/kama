@@ -12,8 +12,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private _selectedAgent = "auto";
   private _selectedFamily = "auto";
-  private _selectedLangs: string[] = [];
   private _cancelStream: (() => void) | null = null;
+  private _wasOnline = false; // track brain online state to refresh only on transition
 
   constructor(
     private readonly _extUri: vscode.Uri,
@@ -29,10 +29,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     view.webview.options = { enableScripts: true, localResourceRoots: [this._extUri] };
     view.webview.html = this._html(view.webview);
 
-    // Re-scan languages when workspace becomes visible
+    // Re-scan context when workspace becomes visible
     view.onDidChangeVisibility(() => {
-      if (view.visible) { this._loadContext(); }
+      if (view.visible) {
+        this._loadContext();
+        this._updateFileContext();
+      }
     });
+
+    // Track active file for context badge (dispose properly)
+    const editorSub = vscode.window.onDidChangeActiveTextEditor(() => {
+      if (this._view?.visible) { this._updateFileContext(); }
+    });
+    view.onDidDispose(() => editorSub.dispose());
 
     view.webview.onDidReceiveMessage(async (m) => {
       switch (m.command) {
@@ -43,19 +52,23 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             const ok = h.ok;
             this._post({ command: "status", online: ok, starting: h.setup, setupPct: h.setupPct, setupModel: h.setupModel });
             this._post({ command: "setAgent", agentId: this._selectedAgent, family: this._selectedFamily });
-            // Restore saved language selections
-            const savedLangs = this._ctx.globalState.get<string[]>("aether.langs", []);
-            if (savedLangs.length) {
-              this._selectedLangs = savedLangs;
-              this._post({ command: "restoreLangs", langs: savedLangs });
-            }
             const saved = this._ctx.globalState.get<string[]>("aether.h", []);
             if (saved.length) { this._post({ command: "restore", h: saved }); }
-            if (!setupDone || !ok) {
+            // Only show setup if it was never completed — don't re-show just because brain is offline
+            if (!setupDone) {
               this._post({ command: "showSetup" });
               if (ok) { this._loadAll(); }
+            } else {
+              const tutDone = this._ctx.globalState.get<boolean>("aether.tutorialDone", false);
+              if (!tutDone) {
+                this._post({ command: "showTutorial" });
+              }
+              if (ok) {
+                this._loadAll();
+                this._loadContext();
+              }
             }
-            if (ok) { this._loadContext(); }
+            // If setupDone && !ok → stay on chat view, offline banner handles it
           }).catch(() => {
             this._post({ command: "status", online: false });
           });
@@ -77,16 +90,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           break;
         case "save": await this._ctx.globalState.update("aether.h", m.h); break;
         case "settings": vscode.commands.executeCommand("workbench.action.openSettings", "aether"); break;
-        case "setLangs":
-          this._selectedLangs = Array.isArray(m.langs) ? m.langs.slice(0, 10) : [];
-          await this._ctx.globalState.update("aether.langs", this._selectedLangs);
-          break;
         case "loadModels": await this._loadAll(); break;
         case "loadHardware": await this._loadHardware(); break;
         case "selectModel": await this._selectModel(m.model); break;
         case "pullModel": await this._pullModel(m.model); break;
         case "finishSetup":
           await this._ctx.globalState.update("aether.setupDone", true);
+          break;
+        case "finishTutorial":
+          await this._ctx.globalState.update("aether.tutorialDone", true);
           break;
         case "openSetup":
           this._post({ command: "showSetup" });
@@ -101,12 +113,63 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         case "startBrain":
           await vscode.commands.executeCommand("aether.startBrain");
           break;
+        case "chain":
+          this._chainContext = m.prompt || "";
+          this._post({ command: "chainSet", preview: (m.prompt || "").slice(0, 80) });
+          break;
+        case "clearChain":
+          this._chainContext = "";
+          break;
+        case "getHistory": {
+          const allH = this._ctx.globalState.get<any[]>("aether.history", []);
+          this._post({ command: "historyData", items: allH });
+          break;
+        }
+        case "toggleFav": {
+          const hist = this._ctx.globalState.get<any[]>("aether.history", []);
+          const idx = hist.findIndex((h: any) => h.id === m.id);
+          if (idx >= 0) { hist[idx].fav = !hist[idx].fav; }
+          await this._ctx.globalState.update("aether.history", hist);
+          this._post({ command: "historyData", items: hist });
+          break;
+        }
+        case "deleteHistItem": {
+          let hh = this._ctx.globalState.get<any[]>("aether.history", []);
+          hh = hh.filter((h: any) => h.id !== m.id);
+          await this._ctx.globalState.update("aether.history", hh);
+          this._post({ command: "historyData", items: hh });
+          break;
+        }
+        case "saveHist": {
+          const cur = this._ctx.globalState.get<any[]>("aether.history", []);
+          cur.unshift(m.item);
+          await this._ctx.globalState.update("aether.history", cur.slice(0, 100));
+          break;
+        }
+        case "prefill":
+          this._post({ command: "prefillInput", text: m.text || "" });
+          break;
       }
     });
   }
 
   public updateBrainStatus(online: boolean, starting: boolean = false, setupPct: number = 0, setupModel: string = ""): void {
     this._post({ command: "status", online, starting, setupPct, setupModel });
+    // When brain transitions from offline → online, auto-refresh model catalog and context (once)
+    if (online && !this._wasOnline) {
+      this._wasOnline = true;
+      this._loadAll();
+      this._loadContext();
+    }
+    if (!online && !starting) {
+      this._wasOnline = false;
+    }
+  }
+
+  private _chainContext = "";
+
+  public prefillInput(text: string): void {
+    this._post({ command: "prefillInput", text });
   }
 
   public async handleVibe(vibe: string): Promise<void> {
@@ -118,16 +181,32 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       this._cancelStream = null;
     }
 
+    // Read active file context
+    let activeFile = "";
+    let activeFileName = "";
+    let activeFileLang = "";
+    const editor = vscode.window.activeTextEditor;
+    if (editor && editor.document.uri.scheme === "file") {
+      const doc = editor.document;
+      activeFile = doc.getText().slice(0, 60000);
+      activeFileName = doc.fileName.split(/[\\/]/).pop() ?? "";
+      activeFileLang = doc.languageId;
+    }
+
     this._post({ command: "loading", on: true });
+
+    const chainCtx = this._chainContext;
+    // Don't consume chain context yet — only if stream succeeds
 
     try {
       this._cancelStream = this._brain.sendVibeStream(
-        vibe, ws, this._selectedFamily, this._selectedLangs,
+        vibe, ws, this._selectedFamily,
         (event) => {
           if (event.type === "token") {
             this._post({ command: "token", text: event.text ?? "" });
           } else if (event.type === "done" || event.type === "fallback") {
             this._cancelStream = null;
+            this._chainContext = ""; // consume chain on success
             const prompt = event.prompt ?? event.text ?? "";
             this._post({
               command: "result",
@@ -152,11 +231,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             this._cancelStream = null;
             this._post({ command: "loading", on: false });
           }
-        }
+        },
+        chainCtx,
+        activeFile,
+        activeFileName,
+        activeFileLang
       );
     } catch (e: unknown) {
       this._post({ command: "err", msg: e instanceof Error ? e.message : String(e) });
       this._post({ command: "loading", on: false });
+    }
+  }
+
+  private _updateFileContext(): void {
+    const editor = vscode.window.activeTextEditor;
+    if (editor && editor.document.uri.scheme === "file") {
+      const name = editor.document.fileName.split(/[\\/]/).pop() ?? "";
+      this._post({ command: "showFileContext", fileName: name });
+    } else {
+      this._post({ command: "showFileContext", fileName: "" });
     }
   }
 
@@ -196,10 +289,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!ws) { return; }
     try {
-      const res = await this._brain.scanContext(ws);
-      if (res.languages?.length) {
-        this._post({ command: "langs", langs: res.languages.slice(0, 5), tech: res.tech_stack });
-      }
+      await this._brain.scanContext(ws);
     } catch { /* silently ignore */ }
   }
 
@@ -360,8 +450,6 @@ body{font-family:var(--f);background:var(--bg);color:var(--t);display:flex;flex-
 .qbadge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:9px;font-weight:600;font-family:var(--m)}
 .qbadge.a{background:rgba(34,197,94,.12);color:#22c55e}
 .qbadge.b{background:rgba(59,130,246,.12);color:#3b82f6}
-.qbadge.c{background:rgba(234,179,8,.12);color:#eab308}
-.qbadge.d{background:rgba(239,68,68,.12);color:#ef4444}
 .sbadge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:6px;font-size:9px;font-weight:600;font-family:var(--m)}
 .sbadge.pass{background:rgba(34,197,94,.08);color:#22c55e}
 .sbadge.warn{background:rgba(234,179,8,.12);color:#eab308}
@@ -393,20 +481,6 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
 .foot-left{display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow:hidden}
 .foot-model{font-family:var(--m);cursor:pointer;padding:2px 6px;border-radius:4px;transition:.15s;flex-shrink:0}
 .foot-model:hover{background:var(--s2);color:var(--t3)}
-.lang-pills{display:flex;gap:3px;flex-wrap:nowrap;overflow:hidden}
-.lp{padding:1px 5px;border-radius:4px;font-size:8px;font-weight:600;font-family:var(--m);color:var(--t4);background:var(--s2);white-space:nowrap;border:1px solid var(--border)}
-/* ── Lang Bar ──────────────────── */
-.lb{border-bottom:1px solid var(--border);background:var(--bg);position:relative}
-.lb-inner{padding:5px 14px;display:flex;align-items:center;gap:4px;overflow-x:auto;overflow-y:visible}
-.lb-inner::-webkit-scrollbar{display:none}
-.lc{padding:2px 8px;border-radius:20px;border:1px solid var(--border);color:var(--t4);background:transparent;font-size:10px;font-weight:500;font-family:var(--m);cursor:pointer;transition:.12s;white-space:nowrap;user-select:none;flex-shrink:0}
-.lc:hover{border-color:var(--border2);color:var(--t2)}
-.lc.on{border-color:var(--blue);color:var(--blue);background:rgba(59,130,246,.1)}
-.lc.lc-add{border-style:dashed;font-size:13px;padding:0 8px;line-height:20px}
-.lb-panel{position:absolute;top:100%;left:0;right:0;background:var(--s1);border:1px solid var(--border2);border-top:none;z-index:200;max-height:0;overflow:hidden;opacity:0;transition:max-height .2s ease,opacity .15s;box-shadow:0 12px 40px rgba(0,0,0,.7)}
-.lb-panel.open{max-height:180px;opacity:1;overflow-y:auto}
-.lb-panel::-webkit-scrollbar{width:3px}.lb-panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-.lb-panel-inner{padding:8px 12px;display:flex;flex-wrap:wrap;gap:5px}
 /* ── Offline Banner & Setup Progress ─────────── */
 .offline-banner{display:none;padding:16px 20px;background:linear-gradient(135deg,var(--s1),var(--s2));border-bottom:1px solid var(--border);text-align:center;animation:fi .2s ease}
 .offline-banner.show{display:block}
@@ -422,7 +496,65 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
 .setup-progress{margin-top:8px}
 .sp-label{font-size:11px;color:var(--t3);margin-bottom:6px}
 .sp-track{height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
-.sp-fill{height:100%;background:var(--blue);border-radius:2px;transition:width .4s ease;width:0%}\n/* Streaming cursor */\n.streaming .stream-text::after{content:'\\u258C';animation:blink 1s step-end infinite;color:var(--blue)}\n@keyframes blink{50%{opacity:0}}
+.sp-fill{height:100%;background:var(--blue);border-radius:2px;transition:width .4s ease;width:0%}
+/* Tutorial */
+.tut{padding:28px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:0}
+.tut-slide{display:none;flex-direction:column;align-items:center;text-align:center;gap:14px;animation:fi .2s ease}
+.tut-slide.active{display:flex}
+.tut-icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px}
+.tut-icon.i1{background:rgba(59,130,246,.12);color:#3b82f6}
+.tut-icon.i2{background:rgba(34,197,94,.12);color:#22c55e}
+.tut-icon.i3{background:rgba(168,85,247,.12);color:#a855f7}
+.tut-icon.i4{background:rgba(234,179,8,.12);color:#eab308}
+.tut h3{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.tut .tut-desc{font-size:12px;color:var(--t3);line-height:1.7;max-width:260px}
+.tut .tut-tip{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;text-align:left;font-size:11px;color:var(--t2);line-height:1.7;width:100%;margin-top:4px}
+.tut .tut-tip b{color:var(--t);font-weight:600}
+.tut .tut-tip code{font-family:var(--m);font-size:10px;background:var(--s3);padding:1px 5px;border-radius:4px;color:var(--blue)}
+.tut-dots{display:flex;gap:6px;justify-content:center;margin:16px 0 8px}
+.tut-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);transition:.2s}
+.tut-dot.on{background:var(--t);width:18px}
+.tut-nav{display:flex;gap:8px;width:100%;margin-top:auto;padding-top:16px}
+.tut-nav .btn{flex:1;padding:11px;border-radius:var(--r);font-size:12px;font-weight:600;text-align:center}
+.tut-skip{background:transparent;color:var(--t3);border:1px solid var(--border);cursor:pointer}
+.tut-skip:hover{background:var(--s1);color:var(--t2)}
+.tut-next{background:var(--t);color:var(--bg);border:none;cursor:pointer}
+.tut-next:hover{opacity:.85}
+/* History */
+.hist{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.hist-top{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.hist-search{flex:1;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;color:var(--t);font-size:12px;font-family:var(--f);outline:none}
+.hist-search:focus{border-color:var(--border2)}
+.hist-search::placeholder{color:var(--t4)}
+.hist-back{width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hist-back:hover{background:var(--s2);color:var(--t)}
+.hist-list{flex:1;overflow-y:auto;padding:4px 0}
+.hist-list::-webkit-scrollbar{width:3px}.hist-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.hi{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.1s}
+.hi:hover{background:var(--s1)}
+.hi-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.hi-vibe{font-size:11px;font-weight:600;color:var(--t2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hi-star{width:20px;height:20px;border:none;background:none;cursor:pointer;color:var(--t4);font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.hi-star.on{color:#eab308}
+.hi-del{width:20px;height:20px;border:none;background:none;cursor:pointer;color:var(--t4);font-size:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:.1s}
+.hi:hover .hi-del{opacity:1}
+.hi-del:hover{color:var(--err)}
+.hi-preview{font-size:10px;color:var(--t3);line-height:1.5;max-height:40px;overflow:hidden;font-family:var(--m)}
+.hi-meta{display:flex;gap:6px;margin-top:4px}
+.hi-tag{font-size:9px;color:var(--t4);font-family:var(--m)}
+.hist-empty{text-align:center;padding:40px 20px;color:var(--t4);font-size:12px}
+/* Chain indicator */
+.chain-bar{display:none;padding:6px 16px;background:var(--s1);border-top:1px solid var(--border);font-size:10px;color:var(--t3);align-items:center;gap:6px}
+.chain-bar.show{display:flex}
+.chain-bar .chain-label{color:var(--blue);font-weight:600}
+.chain-bar .chain-preview{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chain-bar .chain-x{background:none;border:none;color:var(--t4);cursor:pointer;font-size:12px;padding:2px 4px}
+.chain-bar .chain-x:hover{color:var(--t)}
+/* File context badge */
+.fc-badge{display:none;padding:4px 16px 0;font-size:9px;color:var(--t4);align-items:center;gap:4px}
+.fc-badge.show{display:flex}
+.fc-badge svg{width:10px;height:10px}
+\n/* Streaming cursor */\n.streaming .stream-text::after{content:'\\u258C';animation:blink 1s step-end infinite;color:var(--blue)}\n@keyframes blink{50%{opacity:0}}\n/* Thinking animation */\n.thinking-dots span{animation:tdot 1.4s infinite;opacity:0}\n.thinking-dots span:nth-child(1){animation-delay:0s}\n.thinking-dots span:nth-child(2){animation-delay:.2s}\n.thinking-dots span:nth-child(3){animation-delay:.4s}\n@keyframes tdot{0%,80%,100%{opacity:0}40%{opacity:1}}\n.thinking-msg .po{color:var(--t3);font-style:italic}
 </style>
 </head>
 <body>
@@ -431,6 +563,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
 <div class="hdr">
   <div class="hdr-logo">${L20}<span>Aether</span></div>
   <div class="hdr-st"><span class="dot off" id="D"></span><span id="SL">Offline</span></div>
+  <button class="ib" id="bHist" title="Prompt History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
   <button class="ib" id="bSet" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
   <button class="ib" id="bClr" title="Clear chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
 </div>
@@ -443,12 +576,6 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     <svg class="ab-arrow" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l4 4 4-4"/></svg>
   </div>
   <div class="ap" id="AP"></div>
-</div>
-
-<!-- Language Bar -->
-<div class="lb" id="LB">
-  <div class="lb-inner" id="LBI"></div>
-  <div class="lb-panel" id="LBP"></div>
 </div>
 
 <!-- Setup View -->
@@ -487,6 +614,41 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   </button>
 </div>
 
+<!-- Tutorial View -->
+<div class="view" id="V_TUT">
+  <div class="tut">
+    <div class="tut-slide active" data-slide="0">
+      <div class="tut-icon i1">&#9889;</div>
+      <h3>Welcome to Aether</h3>
+      <p class="tut-desc">Aether transforms your ideas into perfectly crafted prompts for any AI coding assistant — 100% locally on your machine.</p>
+      <div class="tut-tip"><b>How it works:</b> Describe what you want to build, pick a target AI model, and Aether generates a production-quality prompt optimized for that model.</div>
+    </div>
+    <div class="tut-slide" data-slide="1">
+      <div class="tut-icon i2">&#128193;</div>
+      <h3>Project-Aware Prompts</h3>
+      <p class="tut-desc">If you open Aether inside a project workspace, it automatically detects your tech stack and languages.</p>
+      <div class="tut-tip"><b>Pro tip:</b> Open your project folder in VS Code <b>before</b> using Aether. It will detect files like <code>package.json</code>, <code>requirements.txt</code>, <code>Cargo.toml</code> etc. and include your tech stack as context in the prompt.</div>
+    </div>
+    <div class="tut-slide" data-slide="2">
+      <div class="tut-icon i3">&#127919;</div>
+      <h3>Choose Your AI Target</h3>
+      <p class="tut-desc">Each AI has different strengths. Pick which AI you'll paste the prompt into — Aether optimizes the output accordingly.</p>
+      <div class="tut-tip"><b>Claude</b> — constraint-rich, thorough<br/><b>GPT</b> — persona-driven, versatile<br/><b>Gemini</b> — reasoning-focused<br/><b>Grok</b> — ultra-concise<br/><b>Auto</b> — works with any AI</div>
+    </div>
+    <div class="tut-slide" data-slide="3">
+      <div class="tut-icon i4">&#128161;</div>
+      <h3>Write Better Prompts</h3>
+      <p class="tut-desc">The more detail you give, the better the output. Be specific about what you want.</p>
+      <div class="tut-tip"><b>Instead of:</b> "make a login page"<br/><br/><b>Try:</b> "Build a login page with email/password auth, input validation, rate limiting, remember me checkbox, and forgot password flow. Use JWT tokens."</div>
+    </div>
+    <div class="tut-dots" id="tutDots"><span class="tut-dot on"></span><span class="tut-dot"></span><span class="tut-dot"></span><span class="tut-dot"></span></div>
+    <div class="tut-nav">
+      <button class="btn tut-skip" id="tutSkip">Skip</button>
+      <button class="btn tut-next" id="tutNext">Next</button>
+    </div>
+  </div>
+</div>
+
 <!-- Chat View -->
 <div class="view active" id="V_CHAT">
   <div class="feed" id="F">
@@ -501,6 +663,15 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     <div style="flex:1"><div class="load-t">Generating prompt...</div><div class="load-s" id="LTM">0s</div></div>
     <button class="stop" id="bStop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
   </div>
+  <div class="chain-bar" id="chainBar">
+    <span class="chain-label">&#x1F517; Chain:</span>
+    <span class="chain-preview" id="chainPreview"></span>
+    <button class="chain-x" id="chainX">&times;</button>
+  </div>
+  <div class="fc-badge" id="fcBadge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+    <span id="fcFileName"></span>
+  </div>
   <div class="input-area">
     <div class="input-wrap">
       <textarea id="I" rows="1" placeholder="Message Aether..."></textarea>
@@ -509,6 +680,18 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   </div>
 </div>
 
+<!-- History View -->
+<div class="view" id="V_HIST">
+  <div class="hist">
+    <div class="hist-top">
+      <button class="hist-back" id="histBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <input class="hist-search" id="histSearch" type="text" placeholder="Search prompts..."/>
+    </div>
+    <div class="hist-list" id="histList">
+      <div class="hist-empty">No prompts yet. Generate your first prompt!</div>
+    </div>
+  </div>
+</div>
 <div class="foot">
   <div class="foot-left"><span>100% Local</span></div>
   <span class="foot-model" id="FM" title="Change model">aether</span>
@@ -519,74 +702,14 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   var vs=acquireVsCodeApi();
   function $(id){return document.getElementById(id)}
   var F=$('F'),E=$('E'),I=$('I'),G=$('G'),LDR=$('LDR'),LTM=$('LTM'),D=$('D'),SL=$('SL'),FM=$('FM');
-  var LB=$('LB'),LBI=$('LBI'),LBP=$('LBP');
   var VS=$('V_SETUP'),VC=$('V_CHAT'),OB=$('OB');
   var AB=$('AB'),AP=$('AP'),AW=$('AW');
   var brainStarting=false;
   var busy=0,ti=null,t0=0,hist=[],selModel='';
   var curAgent='auto',curFamily='auto',panelOpen=false;
-  var selLangs=[],detectedLangs=[],lbOpen=false;
-
-  /* ── All known languages for the picker panel ── */
-  var ALL_LANGS=['Python','JavaScript','TypeScript','Java','Kotlin','C#','C++','C','Go','Rust',
-    'PHP','Ruby','Swift','Dart','SQL','HTML','CSS','SCSS','Shell','React',
-    'Vue','Svelte','Next.js','Angular','Django','FastAPI','Spring','Flutter','Terraform','GraphQL'];
-
-  /* ── Lang bar rendering ── */
-  function renderLangBar(){
-    LBI.innerHTML='';
-    // All chips: detected + any manually added not in detected
-    var shown=detectedLangs.slice();
-    selLangs.forEach(function(l){if(shown.indexOf(l)<0)shown.push(l);});
-    shown.forEach(function(l){
-      var c=document.createElement('span');
-      c.className='lc'+(selLangs.indexOf(l)>=0?' on':'');
-      c.textContent=l;
-      c.addEventListener('click',function(){toggleLang(l);});
-      LBI.appendChild(c);
-    });
-    var add=document.createElement('span');
-    add.className='lc lc-add';add.title='Add language';add.textContent='+';
-    add.addEventListener('click',function(e){e.stopPropagation();toggleLBPanel();});
-    LBI.appendChild(add);
-    // Update placeholder
-    var ph=selLangs.length?'Message Aether... ['+selLangs.slice(0,3).join(', ')+']':'Message Aether...';
-    I.placeholder=ph;
-  }
-
-  function toggleLang(l){
-    var idx=selLangs.indexOf(l);
-    if(idx>=0)selLangs.splice(idx,1);else selLangs.push(l);
-    renderLangBar();
-    if(lbOpen)renderLBPanel();
-    vs.postMessage({command:'setLangs',langs:selLangs});
-  }
-
-  function renderLBPanel(){
-    var h='<div class="lb-panel-inner">';
-    ALL_LANGS.forEach(function(l){
-      var on=selLangs.indexOf(l)>=0;
-      h+='<span class="lc'+(on?' on':'')
-        +'" data-lp="'+escAttr(l)+'">'+esc(l)+'</span>';
-    });
-    h+='</div>';
-    LBP.innerHTML=h;
-  }
-
-  function toggleLBPanel(){
-    lbOpen=!lbOpen;
-    if(lbOpen){renderLBPanel();LBP.classList.add('open');}else{LBP.classList.remove('open');}
-  }
-
-  LBP.addEventListener('click',function(e){
-    var c=e.target.closest('[data-lp]');
-    if(!c)return;
-    toggleLang(c.getAttribute('data-lp'));
-  });
 
   document.addEventListener('click',function(e){
     if(panelOpen&&!e.target.closest('.aw'))closePanel();
-    if(lbOpen&&!e.target.closest('.lb')){lbOpen=false;LBP.classList.remove('open');}
   });
 
   /* ── Agent data (matches Cursor's model list exactly) ── */
@@ -709,25 +832,124 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     if(!selModel)return;
     vs.postMessage({command:'selectModel',model:selModel});
     vs.postMessage({command:'finishSetup'});
-    showView('chat');
+    showView('tutorial');showTutSlide(0);
   });
 
-  function showView(v){VS.classList.toggle('active',v==='setup');VC.classList.toggle('active',v==='chat')}
+  var VT=$('V_TUT'),VH=$('V_HIST');
+  function showView(v){
+    VS.classList.toggle('active',v==='setup');
+    VC.classList.toggle('active',v==='chat');
+    VT.classList.toggle('active',v==='tutorial');
+    VH.classList.toggle('active',v==='history');
+  }
+
+  /* ── Tutorial ── */
+  var tutSlide=0,tutTotal=4;
+  function showTutSlide(n){
+    tutSlide=n;
+    document.querySelectorAll('.tut-slide').forEach(function(s){s.classList.toggle('active',parseInt(s.dataset.slide)===n)});
+    document.querySelectorAll('.tut-dot').forEach(function(d,i){d.classList.toggle('on',i===n)});
+    $('tutNext').textContent=n===tutTotal-1?'Get Started':'Next';
+  }
+  $('tutNext').addEventListener('click',function(){
+    if(tutSlide<tutTotal-1){showTutSlide(tutSlide+1)}
+    else{vs.postMessage({command:'finishTutorial'});showView('chat')}
+  });
+  $('tutSkip').addEventListener('click',function(){
+    vs.postMessage({command:'finishTutorial'});showView('chat');
+  });
+
+  /* ── History ── */
+  var histItems=[];
+  $('bHist').addEventListener('click',function(){
+    showView('history');
+    vs.postMessage({command:'getHistory'});
+  });
+  $('histBack').addEventListener('click',function(){showView('chat')});
+  $('histSearch').addEventListener('input',function(){renderHist()});
+
+  function renderHist(){
+    var c=$('histList'),q=($('histSearch').value||'').toLowerCase();
+    var items=histItems;
+    if(q)items=items.filter(function(h){return (h.vibe||'').toLowerCase().indexOf(q)>=0||(h.prompt||'').toLowerCase().indexOf(q)>=0});
+    // Favs first, then by time
+    items=items.slice().sort(function(a,b){if(a.fav&&!b.fav)return -1;if(!a.fav&&b.fav)return 1;return (b.ts||0)-(a.ts||0)});
+    if(!items.length){c.innerHTML='<div class="hist-empty">'+(q?'No matches':'No prompts yet')+'</div>';return}
+    c.innerHTML='';
+    items.forEach(function(h){
+      var d=document.createElement('div');d.className='hi';
+      var dt=h.ts?new Date(h.ts).toLocaleDateString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+      var prev=(h.prompt||'').slice(0,120).replace(/\\n/g,' ');
+      d.innerHTML='<div class="hi-head"><span class="hi-vibe">'+esc(h.vibe||'Untitled')+'</span>'
+        +'<button class="hi-star'+(h.fav?' on':'')+'" data-fav="'+escAttr(h.id)+'" title="Favorite">'+(h.fav?'\\u2605':'\\u2606')+'</button>'
+        +'<button class="hi-del" data-del="'+escAttr(h.id)+'" title="Delete">\\u2715</button></div>'
+        +'<div class="hi-preview">'+esc(prev)+'</div>'
+        +'<div class="hi-meta"><span class="hi-tag">'+esc(dt)+'</span>'
+        +(h.agent&&h.agent!=='auto'?'<span class="hi-tag">'+esc(h.agent)+'</span>':'')
+        +(h.grade?'<span class="hi-tag">'+esc(h.grade)+'</span>':'')
+        +'</div>';
+      d.addEventListener('click',function(e){
+        if(e.target.closest('[data-fav]')){vs.postMessage({command:'toggleFav',id:h.id});return}
+        if(e.target.closest('[data-del]')){vs.postMessage({command:'deleteHistItem',id:h.id});return}
+        // Click on item → copy prompt to clipboard + show toast + switch to chat
+        vs.postMessage({command:'copy',prompt:h.prompt||''});
+        showView('chat');
+        // Show brief toast
+        var toast=document.createElement('div');
+        toast.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--s2);color:var(--t);border:1px solid var(--border2);padding:6px 14px;border-radius:8px;font-size:11px;font-weight:500;z-index:999;animation:fi .15s ease';
+        toast.textContent='\u2713 Prompt copied to clipboard';
+        document.body.appendChild(toast);
+        setTimeout(function(){toast.remove()},1500);
+      });
+      c.appendChild(d);
+    });
+  }
+
+  /* ── Chain ── */
+  $('chainX').addEventListener('click',function(){
+    $('chainBar').classList.remove('show');
+    $('chainPreview').textContent='';
+    vs.postMessage({command:'clearChain'});
+  });
+
+  /* ── File context badge ── */
+  function updateFcBadge(name){
+    var b=$('fcBadge');
+    if(name){b.classList.add('show');$('fcFileName').textContent='Context: '+name}
+    else{b.classList.remove('show')}
+  }
 
   function go(){
     var t=I.value.trim();if(!t||busy)return;
     E.style.display='none';addU(t);lock();
     vs.postMessage({command:'vibe',text:t});
     I.value='';I.style.height='auto';
+    // Auto-hide chain bar (chain context is consumed once)
+    $('chainBar').classList.remove('show');
+    $('chainPreview').textContent='';
   }
-  function lock(){busy=1;I.disabled=true;G.disabled=true;LDR.classList.add('on');t0=Date.now();ti=setInterval(function(){LTM.textContent=((Date.now()-t0)/1000|0)+'s'},300)}
-  function unlock(){busy=0;I.disabled=false;G.disabled=false;LDR.classList.remove('on');if(ti){clearInterval(ti);ti=null}LTM.textContent='0s';I.focus()}
+  function lock(){
+    busy=1;I.disabled=true;G.disabled=true;LDR.classList.add('on');t0=Date.now();
+    ti=setInterval(function(){LTM.textContent=((Date.now()-t0)/1000|0)+'s'},300);
+    /* Show thinking indicator immediately */
+    var thk=document.createElement('div');thk.className='msg msg-a thinking-msg';
+    thk.innerHTML='<div class="from"><span>Aether</span></div><div class="po"><span class="thinking-dots">Thinking<span>.</span><span>.</span><span>.</span></span></div>';
+    thk.id='_thk';E.style.display='none';F.appendChild(thk);sb();
+  }
+  function unlock(){
+    busy=0;I.disabled=false;G.disabled=false;LDR.classList.remove('on');
+    if(ti){clearInterval(ti);ti=null}LTM.textContent='0s';
+    var thk=document.getElementById('_thk');if(thk)thk.remove();
+    I.focus();
+  }
   function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
   function escAttr(s){return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
   function sb(){requestAnimationFrame(function(){F.scrollTop=F.scrollHeight})}
   function hl(t){var h=esc(t);h=h.replace(/^(##? .+)$/gm,'<span class="h">$1</span>');return h}
 
+  var _lastVibe='';
   function addU(t){
+    _lastVibe=t;
     var d=document.createElement('div');d.className='msg msg-u';
     d.innerHTML='<div class="from">You</div><div class="body">'+esc(t)+'</div>';
     F.appendChild(d);sb();hist.push(JSON.stringify({r:'u',t:t}));save();
@@ -743,10 +965,35 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     if(curAgent!=='auto')h+='<span class="tag">'+esc(info.n)+'</span>';
     if(model)h+='<span class="tag">'+esc(model)+'</span>';
     if(ms)h+='<span class="tag">'+(ms/1000).toFixed(1)+'s</span>';
-    if(grade){var gc=grade.startsWith('A')?'a':grade==='B'?'b':grade==='C'?'c':'d';h+='<span class="qbadge '+gc+'">'+esc(grade)+' ('+Math.round(quality||0)+')</span>'}
+    if(grade){var gc=grade.startsWith('A')?'a':grade.startsWith('B')?'b':'b';h+='<span class="qbadge '+gc+'">'+esc(grade)+'</span>'}
     if(security&&security!=='PASS'){var sc=security==='WARN'?'warn':'fail';h+='<span class="sbadge '+sc+'">\u26a0 '+esc(security)+'</span>'}else if(security==='PASS'){h+='<span class="sbadge pass">\u2713 Secure</span>'}
     h+='</div><div class="acts">';
     h+='<button class="btn btn-w" data-action="agent">Send to Agent</button>';
+    h+='<button class="btn btn-o" data-action="chain">\u{1F517} Chain</button>';
+    h+='<button class="btn btn-o" data-action="copy">Copy</button>';
+    h+='</div>';
+    d.innerHTML=h;F.appendChild(d);sb();
+    hist.push(JSON.stringify({r:'p',t:prompt,ms:ms,m:model,a:curAgent,q:quality,g:grade,s:security}));save();
+    // Persist to full history
+    vs.postMessage({command:'saveHist',item:{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),vibe:_lastVibe,prompt:prompt,agent:info.n,grade:grade||'',ts:Date.now(),fav:false}});
+  }
+
+  /* addPRestore — same as addP but skips saving to full history (prevents duplicates on restore) */
+  function addPRestore(prompt,ms,model,agent,quality,grade,security){
+    var d=document.createElement('div');d.className='msg msg-a';d.setAttribute('data-prompt',prompt);
+    var now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    var info=findAgent(curAgent);
+    var h='<div class="from"><span>Aether</span><span class="time">'+now+'</span></div>';
+    h+='<div class="po">'+hl(prompt)+'</div>';
+    h+='<div class="meta">';
+    if(curAgent!=='auto')h+='<span class="tag">'+esc(info.n)+'</span>';
+    if(model)h+='<span class="tag">'+esc(model)+'</span>';
+    if(ms)h+='<span class="tag">'+(ms/1000).toFixed(1)+'s</span>';
+    if(grade){var gc=grade.startsWith('A')?'a':grade.startsWith('B')?'b':'b';h+='<span class="qbadge '+gc+'">'+esc(grade)+'</span>'}
+    if(security&&security!=='PASS'){var sc=security==='WARN'?'warn':'fail';h+='<span class="sbadge '+sc+'">\u26a0 '+esc(security)+'</span>'}else if(security==='PASS'){h+='<span class="sbadge pass">\u2713 Secure</span>'}
+    h+='</div><div class="acts">';
+    h+='<button class="btn btn-w" data-action="agent">Send to Agent</button>';
+    h+='<button class="btn btn-o" data-action="chain">\u{1F517} Chain</button>';
     h+='<button class="btn btn-o" data-action="copy">Copy</button>';
     h+='</div>';
     d.innerHTML=h;F.appendChild(d);sb();
@@ -764,6 +1011,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   /* ── Streaming token display ── */
   var _streamEl=null,_streamBuf='';
   function streamToken(t){
+    var thk=document.getElementById('_thk');if(thk)thk.remove();
     if(!_streamEl){
       _streamEl=document.createElement('div');_streamEl.className='msg msg-a streaming';
       var now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -774,7 +1022,10 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     _streamEl.querySelector('.stream-text').innerHTML=hl(_streamBuf);
     sb();
   }
-  function finishStream(){_streamEl=null;_streamBuf='';}
+  function finishStream(){
+    if(_streamEl){_streamEl.remove();_streamEl=null}
+    _streamBuf='';
+  }
 
   /* ── Event delegation: Copy / Send to Agent ── */
   F.addEventListener('click',function(e){
@@ -787,12 +1038,19 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     var action=btn.getAttribute('data-action');
     if(action==='agent'){
       vs.postMessage({command:'agent',prompt:prompt});
+      var origA=btn.textContent;
       btn.textContent='\\u2713 Sent';btn.className='btn btn-ok';
+      setTimeout(function(){btn.textContent=origA;btn.className='btn btn-w'},2000);
+    }else if(action==='chain'){
+      vs.postMessage({command:'chain',prompt:prompt});
+      var origC=btn.textContent;
+      btn.textContent='\\u2713 Chained';btn.className='btn btn-ok';
+      setTimeout(function(){btn.textContent=origC;btn.className='btn btn-o'},2000);
     }else if(action==='copy'){
       vs.postMessage({command:'copy',prompt:prompt});
-      var orig=btn.textContent;
+      var origP=btn.textContent;
       btn.textContent='\\u2713 Copied';btn.className='btn btn-ok';
-      setTimeout(function(){btn.textContent=orig;btn.className='btn btn-o'},1500);
+      setTimeout(function(){btn.textContent=origP;btn.className='btn btn-o'},1500);
     }
   });
 
@@ -855,6 +1113,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
         D.className='dot on';
         SL.textContent='Connected';
         OB.classList.remove('show');
+        D.style.background='';
         $('OB_PROG').style.display='none';
         brainStarting=false;
         var btn=$('bStartBrain');
@@ -863,7 +1122,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
         $('bStartTxt').textContent='Start Brain Server';
       } else if(m.starting){
         // Downloading / starting
-        D.className='dot';
+        D.className='dot';D.style.background='var(--blue)';
         var pct=m.setupPct||0;
         var mdl=m.setupModel||'';
         if(pct>0){
@@ -886,6 +1145,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
       } else {
         D.className='dot off';
         SL.textContent='Offline';
+        D.style.background='';
         $('OB_TITLE').textContent='Brain Server Offline';
         $('OB_DESC').textContent='Aether Brain is not running.<br/>It will start automatically when found.';
         $('OB_PROG').style.display='none';
@@ -898,25 +1158,13 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
       }
     }
     else if(m.command==='showSetup'){showView('setup');vs.postMessage({command:'loadModels'})}
+    else if(m.command==='showTutorial'){showView('tutorial');showTutSlide(0)}
     else if(m.command==='allModels'){
       renderInstalled(m.installed||[],m.current||'');
       renderCatalog(m.catalog||[]);
       if(m.current)FM.textContent=m.current;
     }
     else if(m.command==='modelSet'){FM.textContent=m.model}
-    else if(m.command==='langs'){
-      detectedLangs=m.langs||[];
-      // Pre-select detected languages only if user hasn\'t made manual changes yet
-      if(selLangs.length===0){
-        selLangs=detectedLangs.slice();
-        vs.postMessage({command:'setLangs',langs:selLangs});
-      }
-      renderLangBar();
-    }
-    else if(m.command==='restoreLangs'){
-      selLangs=m.langs||[];
-      renderLangBar();
-    }
     else if(m.command==='setAgent'){
       curAgent=m.agentId||'auto';
       curFamily=m.family||'auto';
@@ -944,8 +1192,25 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     else if(m.command==='restore'&&m.h){
       E.style.display='none';
       m.h.forEach(function(raw){
-        try{var o=JSON.parse(raw);if(o.r==='u')addU(o.t);else if(o.r==='p')addP(o.t,o.ms,o.m,o.a,o.q,o.g,o.s)}catch(x){}
+        try{var o=JSON.parse(raw);if(o.r==='u')addU(o.t);else if(o.r==='p')addPRestore(o.t,o.ms,o.m,o.a,o.q,o.g,o.s)}catch(x){}
       });
+    }
+    else if(m.command==='chainSet'){
+      $('chainBar').classList.add('show');
+      $('chainPreview').textContent=m.preview||'';
+    }
+    else if(m.command==='historyData'){
+      histItems=m.items||[];
+      renderHist();
+    }
+    else if(m.command==='prefillInput'){
+      showView('chat');
+      I.value=m.text||'';
+      I.style.height='auto';I.style.height=Math.min(I.scrollHeight,200)+'px';
+      I.focus();
+    }
+    else if(m.command==='showFileContext'){
+      updateFcBadge(m.fileName||'');
     }
   });
 
@@ -957,7 +1222,6 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   vs.postMessage({command:'ready'});
   setTimeout(function(){if(!_gotStatus){vs.postMessage({command:'ready'})}},3000);
   setTimeout(function(){if(!_gotStatus){vs.postMessage({command:'ready'})}},8000);
-  renderLangBar();
   updateBar();
 })();
 </script>

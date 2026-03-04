@@ -2,7 +2,7 @@
   "name": "aether-prompt-generator",
   "displayName": "Aether Prompt Generator",
   "description": "Transform rough ideas into perfect AI prompts. 100% local, no API keys needed. Your data stays private.",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "publisher": "AhmetKayraKama",
   "icon": "media/aether-icon.png",
   "repository": {
@@ -71,6 +71,18 @@
       {
         "command": "aether.sendToAgent",
         "title": "Aether: Send to Agent"
+      },
+      {
+        "command": "aether.generateFromSelection",
+        "title": "Aether: Generate Prompt from Selection"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "aether.generateFromSelection",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a",
+        "when": "editorTextFocus"
       }
     ],
     "configuration": {
