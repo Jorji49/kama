@@ -7,6 +7,7 @@ All agent guides / system prompts are injected at call-time - no external server
 
 from __future__ import annotations
 
+import atexit
 import logging
 import os
 import threading
@@ -153,6 +154,9 @@ def unload_model() -> None:
             _llm = None
             _current_model_id = ""
             log.info("Model unloaded.")
+
+
+atexit.register(unload_model)
 
 
 def load_model(model_id: str) -> bool:

@@ -937,6 +937,10 @@ if __name__ == "__main__":
             timeout_keep_alive=30,
         )
     except (KeyboardInterrupt, asyncio.CancelledError):
-        log.info("Brain shutting down gracefully.")
+        pass
     except SystemExit:
         pass
+    finally:
+        # Ensure model is freed before Python tears down modules
+        llm_backend.unload_model()
+        log.info("Brain shut down gracefully.")

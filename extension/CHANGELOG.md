@@ -2,6 +2,11 @@
 
 All notable changes to Kama - AI Prompt Optimizer will be documented in this file.
 
+## [2.1.3] - 2026-03-04
+
+### Fixed
+- **Ctrl+C shutdown crash (final fix)** - Added `atexit` handler and explicit `finally` block cleanup so the llama model is always freed before Python tears down modules, even when Ctrl+C kills the event loop before lifespan shutdown runs
+
 ## [2.1.2] - 2026-03-04
 
 ### Fixed
