@@ -141,6 +141,20 @@ def any_model_available() -> str | None:
 
 # ── Model loading ─────────────────────────────────────────────────────
 
+def unload_model() -> None:
+    """Explicitly free the loaded model to avoid destructor issues at shutdown."""
+    global _llm, _current_model_id
+    with _load_lock:
+        if _llm is not None:
+            try:
+                _llm.close()
+            except Exception:
+                pass
+            _llm = None
+            _current_model_id = ""
+            log.info("Model unloaded.")
+
+
 def load_model(model_id: str) -> bool:
     """
     Load a GGUF model into memory. Thread-safe.
@@ -160,6 +174,11 @@ def load_model(model_id: str) -> bool:
                 return True  # already loaded
 
             # Unload previous model before loading new one
+            if _llm is not None:
+                try:
+                    _llm.close()
+                except Exception:
+                    pass
             _llm = None
             _current_model_id = ""
 

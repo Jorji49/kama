@@ -2,6 +2,12 @@
 
 All notable changes to Kama - AI Prompt Optimizer will be documented in this file.
 
+## [2.1.2] - 2026-03-04
+
+### Fixed
+- **Clean shutdown crash** - Model is now explicitly freed during ASGI lifespan shutdown, eliminating `TypeError: 'NoneType' object is not callable` and `CancelledError` tracebacks on exit
+- **Model switch leak** - Switching models now properly `.close()`s the previous Llama instance instead of just dropping the reference
+
 ## [2.1.1] - 2026-03-04
 
 ### Fixed

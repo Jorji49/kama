@@ -59,7 +59,9 @@ async def lifespan(app: FastAPI):
     # Startup: auto-load or auto-download the default model
     await asyncio.to_thread(llm_backend.auto_load)
     yield
-    # Shutdown: nothing special needed
+    # Shutdown: explicitly free the model before Python tears down modules
+    log.info("Shutting down — releasing model…")
+    await asyncio.to_thread(llm_backend.unload_model)
 
 
 app = FastAPI(title="Kama Brain", version="4.0.0", lifespan=lifespan)
