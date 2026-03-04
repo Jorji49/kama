@@ -1,5 +1,5 @@
 """
-Aether Brain — Security Auditor
+Kama Brain - Security Auditor
 
 Before a prompt is generated, this module runs a battery of heuristic
 checks on the USER'S VIBE INPUT (not the assembled prompt) to catch:
@@ -12,7 +12,7 @@ checks on the USER'S VIBE INPUT (not the assembled prompt) to catch:
 The auditor returns a structured report with a pass/warn/fail verdict.
 
 DESIGN NOTE:
-  We audit the raw user vibe and any sampled file contents — NOT the
+  We audit the raw user vibe and any sampled file contents - NOT the
   assembled XML Master Prompt.  The Master Prompt contains our own
   <system> / <constraints> / <task> tags which are safe by construction.
 """
@@ -141,7 +141,7 @@ def audit_vibe(vibe: str, sampled_contents: str = "") -> AuditReport:
                 AuditFinding(
                     rule=rule_name,
                     severity=Verdict.WARN,
-                    detail="Potential credential detected — redact before sending.",
+                    detail="Potential credential detected - redact before sending.",
                 )
             )
 
@@ -163,7 +163,7 @@ def audit_vibe(vibe: str, sampled_contents: str = "") -> AuditReport:
             AuditFinding(
                 rule="vibe_too_long",
                 severity=Verdict.WARN,
-                detail=f"Vibe is {len(vibe):,} chars — consider being more concise.",
+                detail=f"Vibe is {len(vibe):,} chars - consider being more concise.",
             )
         )
 
@@ -182,7 +182,7 @@ def audit_vibe(vibe: str, sampled_contents: str = "") -> AuditReport:
 
 def audit_prompt(master_prompt: str) -> AuditReport:
     """
-    Legacy wrapper — extracts the user vibe from the Master Prompt
+    Legacy wrapper - extracts the user vibe from the Master Prompt
     and audits only that portion.
 
     If the vibe can't be extracted, audits the full text with

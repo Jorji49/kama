@@ -1,4 +1,4 @@
-# Aether Brain — Python Dependencies
+# Kama Brain - Python Dependencies
 # Install: pip install -r requirements.txt
 #
 # llama-cpp-python CPU wheel (Windows/Linux/macOS):

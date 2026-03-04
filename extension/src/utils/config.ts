@@ -1,21 +1,21 @@
 /**
- * Aether — Configuration Utilities
+ * Kama - Configuration Utilities
  *
- * Typed accessors for `aether.*` settings.
- * 100% local mode — no external API keys needed.
+ * Typed accessors for `kama.*` settings.
+ * 100% local mode - no external API keys needed.
  *
  * @module config
  */
 
 import * as vscode from "vscode";
 
-const SECTION = "aether";
+const SECTION = "kama";
 
 export function getConfig<T>(key: string, fallback: T): T {
   return vscode.workspace.getConfiguration(SECTION).get<T>(key, fallback);
 }
 
-export const AetherConfig = {
+export const KamaConfig = {
   get brainServerUrl(): string {
     return getConfig("brainServerUrl", "http://127.0.0.1:8420");
   },

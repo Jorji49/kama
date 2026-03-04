@@ -1,5 +1,5 @@
 """
-Aether Brain v4.0 — AI-Specific Prompt Engine
+Kama Brain v4.0 - AI-Specific Prompt Engine
 
 Transforms user vibes into world-class, AI-family-optimized prompts.
 Each target AI (Claude, GPT, Gemini, Grok, Codex) gets tailored output.
@@ -7,7 +7,7 @@ Each target AI (Claude, GPT, Gemini, Grok, Codex) gets tailored output.
 Pipeline: Security Audit → Context Scan → AI-Specific Generation →
           Sanitization → Quality Scoring → Fingerprinting
 
-Architecture: 100% LOCAL — llama-cpp-python (GGUF), no Ollama, no external APIs.
+Architecture: 100% LOCAL - llama-cpp-python (GGUF), no Ollama, no external APIs.
 """
 
 from __future__ import annotations
@@ -55,14 +55,14 @@ log = logging.getLogger("brain")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Modern lifespan handler — replaces deprecated on_event('startup')."""
+    """Modern lifespan handler - replaces deprecated on_event('startup')."""
     # Startup: auto-load or auto-download the default model
     await asyncio.to_thread(llm_backend.auto_load)
     yield
     # Shutdown: nothing special needed
 
 
-app = FastAPI(title="Aether Brain", version="4.0.0", lifespan=lifespan)
+app = FastAPI(title="Kama Brain", version="4.0.0", lifespan=lifespan)
 
 # ── Security: CORS restricted to localhost + VS Code extension origins ──
 # Note: allow_origins expects exact strings or "*". Port-wildcards are not
@@ -89,7 +89,7 @@ _rate_last_cleanup = 0.0
 
 def _client_key(request: Request, prefix: str) -> str:
     """Build a per-client rate-limit key from client IP + endpoint prefix."""
-    # X-Forwarded-For only relevant if behind a proxy — for localhost this is simply 127.0.0.1
+    # X-Forwarded-For only relevant if behind a proxy - for localhost this is simply 127.0.0.1
     ip = request.client.host if request.client else "unknown"
     return f"{prefix}:{ip}"
 
@@ -115,13 +115,13 @@ def _check_rate(key: str, limit: int) -> bool:
     return True
 
 
-# ── Agent guides (reinforcement lines for llama — injected after system prompt) ──
+# ── Agent guides (reinforcement lines for llama - injected after system prompt) ──
 
 _GUIDES: dict[str, str] = {
-    "claude": "TARGET: Claude. Write a clean natural-language prompt — no XML templates, no scaffolding.",
-    "gpt": "TARGET: GPT. Write a clean natural-language prompt — no markdown headers, no template structure.",
-    "gpt-codex": "TARGET: Codex. Write a clean technical spec in natural prose — no scaffolding.",
-    "gemini": "TARGET: Gemini. Write a clean natural-language prompt — thorough but no tables or scaffolding.",
+    "claude": "TARGET: Claude. Write a clean natural-language prompt - no XML templates, no scaffolding.",
+    "gpt": "TARGET: GPT. Write a clean natural-language prompt - no markdown headers, no template structure.",
+    "gpt-codex": "TARGET: Codex. Write a clean technical spec in natural prose - no scaffolding.",
+    "gemini": "TARGET: Gemini. Write a clean natural-language prompt - thorough but no tables or scaffolding.",
     "grok": "TARGET: Grok. Ultra-concise, under 300 words. No templates.",
     "o3": "TARGET: o3/o4. Encourage deep reasoning naturally. No template scaffolding.",
     "auto": "Write a clean, natural-language prompt for any AI. No templates, no scaffolding, no headers.",
@@ -144,17 +144,17 @@ def _adaptive_temperature(vibe: str) -> float:
     for keywords, temp in _TASK_TEMPS:
         if any(k in low for k in keywords):
             return temp
-    return settings.AETHER_TEMPERATURE
+    return settings.KAMA_TEMPERATURE
 
 
 def _adaptive_tokens(vibe: str) -> int:
     """Return adaptive token limit based on vibe length and complexity."""
     word_count = len(vibe.split())
     if word_count < 10:
-        return min(settings.AETHER_MAX_TOKENS, 1024)
+        return min(settings.KAMA_MAX_TOKENS, 1024)
     if word_count < 30:
-        return min(settings.AETHER_MAX_TOKENS, 1536)
-    return min(settings.AETHER_MAX_TOKENS, 2048)
+        return min(settings.KAMA_MAX_TOKENS, 1536)
+    return min(settings.KAMA_MAX_TOKENS, 2048)
 
 _FAMILY_NAMES: dict[str, str] = {
     "claude": "Claude (Anthropic)", "gpt": "GPT (OpenAI)", "gpt-codex": "GPT Codex (OpenAI)",
@@ -231,7 +231,7 @@ class PromptResponse(BaseModel):
 
 @app.get("/health")
 async def health():
-    model_id = llm_backend.current_model() or settings.AETHER_MODEL
+    model_id = llm_backend.current_model() or settings.KAMA_MODEL
     s = llm_backend.setup_state()
     if s["active"]:
         return {
@@ -443,7 +443,7 @@ async def optimize_prompt_endpoint(req: OptimizeRequest, request: Request):
 async def list_models():
     installed = llm_backend.get_installed()
     models = [{"id": m["id"], "name": m["name"], "size_mb": m.get("size_mb", 0)} for m in installed]
-    return {"models": models, "current": llm_backend.current_model() or settings.AETHER_MODEL}
+    return {"models": models, "current": llm_backend.current_model() or settings.KAMA_MODEL}
 
 
 @app.get("/models/available")
@@ -514,13 +514,13 @@ async def set_model(req: SetModelRequest):
     ok = await asyncio.to_thread(llm_backend.load_model, model_id)
     if not ok:
         return JSONResponse(status_code=400, content={"detail": f"Model '{model_id}' not available. Download it first."})
-    settings.AETHER_MODEL = model_id
+    settings.KAMA_MODEL = model_id
     return {"status": "ok", "model": model_id}
 
 
 @app.post("/vibe/stream")
 async def vibe_stream(req: VibeRequest, request: Request):
-    """Stream prompt generation via SSE — delivers tokens as they arrive."""
+    """Stream prompt generation via SSE - delivers tokens as they arrive."""
     request_id = uuid.uuid4().hex[:8]
     SEP = "\n\n"
 
@@ -559,11 +559,11 @@ async def vibe_stream(req: VibeRequest, request: Request):
         if pattern_ctx:
             user_msg += f"\n{pattern_ctx}"
 
-        # Chain context — previous prompt in a multi-step workflow
+        # Chain context - previous prompt in a multi-step workflow
         if req.chain_context:
-            user_msg += f"\n\nPREVIOUS PROMPT IN THIS CHAIN (build upon it, extend or refine — do NOT repeat it verbatim):\n{req.chain_context[:8000]}"
+            user_msg += f"\n\nPREVIOUS PROMPT IN THIS CHAIN (build upon it, extend or refine - do NOT repeat it verbatim):\n{req.chain_context[:8000]}"
 
-        # Active file context — code from the user's currently open editor
+        # Active file context - code from the user's currently open editor
         if req.active_file:
             fname = req.active_file_name or "untitled"
             flang = req.active_file_language or ""
@@ -590,7 +590,7 @@ async def vibe_stream(req: VibeRequest, request: Request):
             if not llm_backend.is_loaded():
                 raise RuntimeError("No model loaded")
 
-            # Stream tokens asynchronously — run generator in thread pool
+            # Stream tokens asynchronously - run generator in thread pool
             token_q: queue.Queue = queue.Queue()
 
             def _run_stream():
@@ -812,7 +812,7 @@ def _clean(text: str) -> str:
 
 
 def _is_bad(text: str) -> bool:
-    """Detect conversational or code output — trigger fallback."""
+    """Detect conversational or code output - trigger fallback."""
     low = text.lower()
 
     # Model acting as assistant instead of prompt engineer
@@ -925,11 +925,16 @@ if __name__ == "__main__":
                     port = alt
                     break
 
-    log.info("Brain v4.0 | %s | :%d | reload=%s", settings.AETHER_MODEL, port, use_reload)
-    uvicorn.run(
-        "sslm_engine:app",
-        host=settings.HOST,
-        port=port,
-        reload=use_reload,
-        timeout_keep_alive=30,
-    )
+    log.info("Brain v4.0 | %s | :%d | reload=%s", settings.KAMA_MODEL, port, use_reload)
+    try:
+        uvicorn.run(
+            "sslm_engine:app",
+            host=settings.HOST,
+            port=port,
+            reload=use_reload,
+            timeout_keep_alive=30,
+        )
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        log.info("Brain shutting down gracefully.")
+    except SystemExit:
+        pass

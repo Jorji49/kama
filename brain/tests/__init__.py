@@ -1,5 +1,5 @@
 """
-Aether Brain — Test Suite
+Kama Brain - Test Suite
 
 Run: pytest brain/tests/ -v
 """

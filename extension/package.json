@@ -1,17 +1,17 @@
 {
-  "name": "aether-prompt-generator",
-  "displayName": "Aether Prompt Generator",
+  "name": "kama-ai-prompt-optimizer",
+  "displayName": "Kama - AI Prompt Optimizer",
   "description": "Transform rough ideas into perfect AI prompts. 100% local, no API keys needed. Your data stays private.",
   "version": "2.1.1",
   "publisher": "AhmetKayraKama",
-  "icon": "media/aether-icon.png",
+  "icon": "media/kama-icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Jorji49/aether"
+    "url": "https://github.com/Jorji49/kama"
   },
-  "homepage": "https://github.com/Jorji49/aether#readme",
+  "homepage": "https://github.com/Jorji49/kama#readme",
   "bugs": {
-    "url": "https://github.com/Jorji49/aether/issues"
+    "url": "https://github.com/Jorji49/kama/issues"
   },
   "license": "MIT",
   "engines": {
@@ -44,63 +44,63 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "aether-sidebar",
-          "title": "Aether",
-          "icon": "media/aether-icon.svg"
+          "id": "kama-sidebar",
+          "title": "Kama",
+          "icon": "media/kama-icon.svg"
         }
       ]
     },
     "views": {
-      "aether-sidebar": [
+      "kama-sidebar": [
         {
           "type": "webview",
-          "id": "aether.vibePanel",
-          "name": "Aether"
+          "id": "kama.vibePanel",
+          "name": "Kama"
         }
       ]
     },
     "commands": [
       {
-        "command": "aether.sendVibe",
-        "title": "Aether: Send Vibe"
+        "command": "kama.sendVibe",
+        "title": "Kama: Send Vibe"
       },
       {
-        "command": "aether.startBrain",
-        "title": "Aether: Start Brain"
+        "command": "kama.startBrain",
+        "title": "Kama: Start Brain"
       },
       {
-        "command": "aether.sendToAgent",
-        "title": "Aether: Send to Agent"
+        "command": "kama.sendToAgent",
+        "title": "Kama: Send to Agent"
       },
       {
-        "command": "aether.generateFromSelection",
-        "title": "Aether: Generate Prompt from Selection"
+        "command": "kama.generateFromSelection",
+        "title": "Kama: Generate Prompt from Selection"
       }
     ],
     "keybindings": [
       {
-        "command": "aether.generateFromSelection",
-        "key": "ctrl+shift+a",
-        "mac": "cmd+shift+a",
+        "command": "kama.generateFromSelection",
+        "key": "ctrl+shift+k",
+        "mac": "cmd+shift+k",
         "when": "editorTextFocus"
       }
     ],
     "configuration": {
-      "title": "Aether",
+      "title": "Kama",
       "properties": {
-        "aether.brainServerUrl": {
+        "kama.brainServerUrl": {
           "type": "string",
           "default": "http://127.0.0.1:8420",
-          "description": "URL of the Aether Brain server. Change only if running Brain on a different machine or port.",
+          "description": "URL of the Kama Brain server. Change only if running Brain on a different machine or port.",
           "order": 1
         },
-        "aether.model": {
+        "kama.model": {
           "type": "string",
           "default": "llama3.2-1b",
           "description": "Local GGUF model for prompt generation. Models auto-download on first use. Options: llama3.2-1b (fast), llama3.2-3b (recommended), phi3.5-mini, gemma2-2b.",
           "order": 2
         },
-        "aether.maxContextFiles": {
+        "kama.maxContextFiles": {
           "type": "number",
           "default": 30,
           "description": "Maximum number of project files to scan for context. Higher values give more context but slower generation. Recommended: 20-50.",
@@ -108,13 +108,13 @@
           "maximum": 100,
           "order": 3
         },
-        "aether.autoSendToAgent": {
+        "kama.autoSendToAgent": {
           "type": "boolean",
           "default": false,
           "description": "Automatically send the generated prompt to the AI agent after generation.",
           "order": 4
         },
-        "aether.temperature": {
+        "kama.temperature": {
           "type": "number",
           "default": 0.1,
           "description": "Temperature for prompt generation (0.0-1.0). Lower = more focused. Recommended: 0.1 for coding prompts.",
@@ -122,7 +122,7 @@
           "maximum": 1,
           "order": 5
         },
-        "aether.maxTokens": {
+        "kama.maxTokens": {
           "type": "number",
           "default": 2048,
           "description": "Maximum tokens for generated prompts. Recommended: 1024-2048 for most tasks, 3072+ for complex architecture prompts.",

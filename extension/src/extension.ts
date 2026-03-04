@@ -1,5 +1,5 @@
 /**
- * Aether — Main Extension Entry Point
+ * Kama - Main Extension Entry Point
  *
  * Multi-IDE support: Cursor, Claude Code, Windsurf/Antigravity, GitHub Copilot.
  * Resilient health check with 3-failure threshold.
@@ -11,19 +11,19 @@ import * as path from "path";
 import * as cp from "child_process";
 import { SidebarProvider } from "./providers/SidebarProvider";
 import { BrainClient } from "./services/BrainClient";
-import { AetherConfig } from "./utils/config";
+import { KamaConfig } from "./utils/config";
 
 let brainClient: BrainClient;
 let _healthInterval: ReturnType<typeof setInterval> | null = null;
 
 export function activate(context: vscode.ExtensionContext): void {
-  brainClient = new BrainClient(AetherConfig.brainServerUrl);
+  brainClient = new BrainClient(KamaConfig.brainServerUrl);
   const sidebarProvider = new SidebarProvider(context.extensionUri, brainClient, context);
 
   // ── Register Sidebar ──────────────────────────────────────────────
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
-      "aether.vibePanel",
+      "kama.vibePanel",
       sidebarProvider,
       { webviewOptions: { retainContextWhenHidden: true } }
     )
@@ -31,7 +31,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ── Commands ──────────────────────────────────────────────────────
   context.subscriptions.push(
-    vscode.commands.registerCommand("aether.sendVibe", async () => {
+    vscode.commands.registerCommand("kama.sendVibe", async () => {
       const input = await vscode.window.showInputBox({
         prompt: "Enter your vibe...",
         placeHolder: "e.g. create a login page, add dark mode",
@@ -41,12 +41,12 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("aether.startBrain", async () => {
-      // Find brain folder — search workspace first (dev), then bundled, then others
+    vscode.commands.registerCommand("kama.startBrain", async () => {
+      // Find brain folder - search workspace first (dev), then bundled, then others
       let brainPath = "";
       const hasBrain = (dir: string) => fs.existsSync(path.join(dir, "sslm_engine.py"));
 
-      // 1. Workspace folder (development — always prefer this for fresh code)
+      // 1. Workspace folder (development - always prefer this for fresh code)
       const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (ws && hasBrain(path.join(ws, "brain"))) { brainPath = path.join(ws, "brain"); }
 
@@ -74,7 +74,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       if (!brainPath) {
         const pick = await vscode.window.showErrorMessage(
-          "Aether: Brain folder not found. Open the Aether project as your workspace.",
+          "Kama: Brain folder not found. Open the Kama project as your workspace.",
           "Browse..."
         );
         if (pick === "Browse...") {
@@ -97,7 +97,7 @@ export function activate(context: vscode.ExtensionContext): void {
         cp.execSync(`${pythonCmd} --version`, { timeout: 5000, stdio: "pipe" });
       } catch {
         vscode.window.showErrorMessage(
-          "Aether requires Python 3.10+. Install Python from python.org and restart VS Code.",
+          "Kama requires Python 3.10+. Install Python from python.org and restart VS Code.",
           "Download Python"
         ).then(pick => {
           if (pick === "Download Python") {
@@ -109,16 +109,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
       // Prevent double-start: if brain is already starting, don't create another terminal
       if (isBrainStarting()) {
-        vscode.window.showInformationMessage("Aether Brain is already starting. Please wait…");
+        vscode.window.showInformationMessage("Kama Brain is already starting. Please wait…");
         return;
       }
 
-      // Kill existing Aether Brain terminal to avoid stale sessions / port conflicts
-      const existing = vscode.window.terminals.find(t => t.name === "Aether Brain");
+      // Kill existing Kama Brain terminal to avoid stale sessions / port conflicts
+      const existing = vscode.window.terminals.find(t => t.name === "Kama Brain");
       if (existing) { existing.dispose(); }
       // Small delay to let the old terminal fully close before creating a new one
       await new Promise(r => setTimeout(r, 500));
-      const terminal = vscode.window.createTerminal({ name: "Aether Brain" });
+      const terminal = vscode.window.createTerminal({ name: "Kama Brain" });
 
       const isWin = process.platform === "win32";
       const sep = isWin ? " ; " : " && ";
@@ -128,10 +128,10 @@ export function activate(context: vscode.ExtensionContext): void {
       const pipInstall = `${pythonCmd} -m pip install -r requirements.txt --quiet`;
       const startCmd = `${pythonCmd} sslm_engine.py`;
       if (isWin) {
-        // PowerShell: check exit code properly — try/catch doesn't catch non-terminating errors
+        // PowerShell: check exit code properly - try/catch doesn't catch non-terminating errors
         terminal.sendText(`${cdCmd} ; ${depCheck} 2>$null ; if ($LASTEXITCODE -ne 0) { ${pipInstall} } ; ${startCmd}`);
       } else {
-        // Bash: short-circuit — only pip install if import fails
+        // Bash: short-circuit - only pip install if import fails
         terminal.sendText(`${cdCmd} && (${depCheck} 2>/dev/null || ${pipInstall}) && ${startCmd}`);
       }
       terminal.show(true); // Show terminal so user can see startup progress
@@ -141,17 +141,17 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("aether.sendToAgent", async (prompt: string) => {
+    vscode.commands.registerCommand("kama.sendToAgent", async (prompt: string) => {
       await sendPromptToAgent(prompt);
     })
   );
 
   // ── Generate from Selection ───────────────────────────────────────
   context.subscriptions.push(
-    vscode.commands.registerCommand("aether.generateFromSelection", async () => {
+    vscode.commands.registerCommand("kama.generateFromSelection", async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
-        vscode.window.showInformationMessage("Aether: No active editor.");
+        vscode.window.showInformationMessage("Kama: No active editor.");
         return;
       }
       const sel = editor.selection;
@@ -163,12 +163,12 @@ export function activate(context: vscode.ExtensionContext): void {
       if (text.trim()) {
         prefill = `Regarding this ${lang} code from ${fileName}:\n\`\`\`${lang}\n${text.slice(0, 3000)}\n\`\`\`\n`;
       } else {
-        // No selection — just open the sidebar with file context hint
+        // No selection - just open the sidebar with file context hint
         prefill = `Regarding ${fileName} (${lang}):\n`;
       }
 
-      // Focus the sidebar and prefill — retry until webview is ready
-      await vscode.commands.executeCommand("aether.vibePanel.focus");
+      // Focus the sidebar and prefill - retry until webview is ready
+      await vscode.commands.executeCommand("kama.vibePanel.focus");
       const maxWait = 3000;
       const step = 200;
       for (let waited = 0; waited < maxWait; waited += step) {
@@ -182,16 +182,16 @@ export function activate(context: vscode.ExtensionContext): void {
   // ── Resilient Health Check + Auto-start ──────────────────────────
   // On first activation: if brain is unreachable, auto-start it silently.
   // During model setup: poll every 5 s and report download progress to UI.
-  // _brainStartingAt: timestamp when startBrain was invoked — keeps UI in
+  // _brainStartingAt: timestamp when startBrain was invoked - keeps UI in
   // "starting" state until brain responds OK or a generous timeout elapses.
   let failCount = 0;
   let wasOnline = false;
   let _autoStarted = false;
   let _brainStartingAt = 0;          // 0 = not starting
   const MAX_FAILS = 3;
-  const START_TIMEOUT_MS = 120_000;   // 2 min — covers download + model load
+  const START_TIMEOUT_MS = 120_000;   // 2 min - covers download + model load
 
-  /** Mark brain as "starting" — called by the startBrain command. */
+  /** Mark brain as "starting" - called by the startBrain command. */
   function markBrainStarting(): void {
     _brainStartingAt = Date.now();
   }
@@ -229,7 +229,7 @@ export function activate(context: vscode.ExtensionContext): void {
           sidebarProvider.updateBrainStatus(false);
           if (!_autoStarted && failCount >= 1) {
             _autoStarted = true;
-            vscode.commands.executeCommand("aether.startBrain");
+            vscode.commands.executeCommand("kama.startBrain");
           }
         }
       }
@@ -241,7 +241,7 @@ export function activate(context: vscode.ExtensionContext): void {
         sidebarProvider.updateBrainStatus(false);
         if (!_autoStarted && failCount >= 1) {
           _autoStarted = true;
-          vscode.commands.executeCommand("aether.startBrain");
+          vscode.commands.executeCommand("kama.startBrain");
         }
       }
     }
@@ -251,7 +251,7 @@ export function activate(context: vscode.ExtensionContext): void {
   _healthInterval = setInterval(doHealthCheck, 5_000);
   context.subscriptions.push({ dispose: () => { if (_healthInterval) { clearInterval(_healthInterval); _healthInterval = null; } } });
 
-  console.log("[Aether] Activated — 100% local mode.");
+  console.log("[Kama] Activated - 100% local mode.");
 }
 
 async function sendPromptToAgent(prompt: string): Promise<void> {
@@ -386,5 +386,5 @@ function delay(ms: number): Promise<void> {
 export function deactivate(): void {
   if (_healthInterval) { clearInterval(_healthInterval); _healthInterval = null; }
   brainClient?.abort();
-  console.log("[Aether] Deactivated.");
+  console.log("[Kama] Deactivated.");
 }

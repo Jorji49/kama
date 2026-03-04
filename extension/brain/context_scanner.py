@@ -1,5 +1,5 @@
 """
-Aether-IDE Brain — Context-Aware Workspace Scanner
+Kama-IDE Brain - Context-Aware Workspace Scanner
 
 Walks the user's project directory to build a structured snapshot that is
 injected into the XML Master Prompt.  The snapshot includes:

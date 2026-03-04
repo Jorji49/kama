@@ -1,10 +1,10 @@
 """
-Aether Brain — Hardware Profiler & AI Model Recommender
+Kama Brain - Hardware Profiler & AI Model Recommender
 
 Detects local PC specs (RAM, CPU, GPU/VRAM) and recommends the optimal
 GGUF model based on available hardware resources.
 
-Architecture: 100% LOCAL — reads system hardware, no network required.
+Architecture: 100% LOCAL - reads system hardware, no network required.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ MODEL_CATALOG: list[ModelSpec] = [
 
     # Small (4–6 GB RAM)
     ModelSpec("gemma2-2b",      "🔷 Google 2B. Great speed/quality balance.",          "1.6 GB",  4.0, 0, 2, 4, "general",     ["small", "balanced"]),
-    ModelSpec("llama3.2-3b",    "⭐ Best Pick — Fast, sharp, low RAM. Ideal for CPU.", "2.0 GB",  5.0, 0, 3, 4, "general",     ["small", "recommended", "best-value"]),
+    ModelSpec("llama3.2-3b",    "⭐ Best Pick - Fast, sharp, low RAM. Ideal for CPU.", "2.0 GB",  5.0, 0, 3, 4, "general",     ["small", "recommended", "best-value"]),
 
     # Medium (6–10 GB RAM)
     ModelSpec("phi3.5-mini",    "🧠 Microsoft 3.8B. Excellent structured prompts.",    "2.4 GB",  6.0, 0, 4, 3, "general",     ["medium", "quality"]),
@@ -179,7 +179,7 @@ def _detect_gpu() -> tuple[str, float, bool, bool]:
             if "Apple" in out:
                 has_metal = True
                 gpu_name = "Apple Silicon GPU"
-                # Unified memory — share with RAM
+                # Unified memory - share with RAM
                 match = re.search(r"Total Number of Cores:\s*(\d+)", out)
                 if match:
                     gpu_name = f"Apple Silicon GPU ({match.group(1)} cores)"
@@ -234,7 +234,7 @@ def _detect_gpu() -> tuple[str, float, bool, bool]:
 
 
 def detect_hardware() -> HardwareInfo:
-    """Detect all hardware specs. Never raises — returns safe defaults on any error."""
+    """Detect all hardware specs. Never raises - returns safe defaults on any error."""
     try:
         ram_gb = _detect_ram_gb()
         cpu_name, logical, physical = _detect_cpu()
@@ -299,7 +299,7 @@ def recommend_models(
     runnable = [m for m in MODEL_CATALOG if can_run(m)]
 
     if not runnable:
-        # Very limited RAM — suggest absolutely smallest
+        # Very limited RAM - suggest absolutely smallest
         runnable = [MODEL_CATALOG[0]]
 
     # Optimal: maximize quality among runnable

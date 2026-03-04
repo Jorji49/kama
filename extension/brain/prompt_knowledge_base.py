@@ -1,5 +1,5 @@
 """
-Aether Brain — Prompt Knowledge Base v2.0
+Kama Brain - Prompt Knowledge Base v2.0
 
 World-class prompt generation powered by:
   1. Community analysis (25+ prompts from prompts.chat "Vibe Coding" category)
@@ -39,7 +39,7 @@ class PromptPattern:
 
 PROMPT_PATTERNS: list[PromptPattern] = [
 
-    # ─── 1. Code Recon (v2.7) — by thanos0000 ─────────────────────────
+    # ─── 1. Code Recon (v2.7) - by thanos0000 ─────────────────────────
     PromptPattern(
         name="Code Recon",
         category="code-analysis",
@@ -62,7 +62,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["debugging", "code-review"],
     ),
 
-    # ─── 2. Comprehensive Code Review Expert — by gyfla3946 ──────────
+    # ─── 2. Comprehensive Code Review Expert - by gyfla3946 ──────────
     PromptPattern(
         name="Comprehensive Code Review Expert",
         category="code-review",
@@ -83,7 +83,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "debugging", "best-practices"],
     ),
 
-    # ─── 3. CodeRabbit — AI Code Review Assistant ────────────────────
+    # ─── 3. CodeRabbit - AI Code Review Assistant ────────────────────
     PromptPattern(
         name="CodeRabbit AI Code Review",
         category="code-review",
@@ -104,7 +104,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "security"],
     ),
 
-    # ─── 4. Copilot Instruction — by can-acar ───────────────────────
+    # ─── 4. Copilot Instruction - by can-acar ───────────────────────
     PromptPattern(
         name="Copilot Instruction",
         category="development",
@@ -119,7 +119,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["development"],
     ),
 
-    # ─── 5. Test Automation Expert — by ersinyilmaz ──────────────────
+    # ─── 5. Test Automation Expert - by ersinyilmaz ──────────────────
     PromptPattern(
         name="Test Automation Expert",
         category="testing",
@@ -147,7 +147,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["automation", "testing", "devops"],
     ),
 
-    # ─── 6. Git Commit Guidelines — by aliosmanozturk ────────────────
+    # ─── 6. Git Commit Guidelines - by aliosmanozturk ────────────────
     PromptPattern(
         name="Git Commit Guidelines",
         category="git",
@@ -172,7 +172,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["git"],
     ),
 
-    # ─── 7. Sentry Bug Fixer — by f ─────────────────────────────────
+    # ─── 7. Sentry Bug Fixer - by f ─────────────────────────────────
     PromptPattern(
         name="Sentry Bug Fixer",
         category="debugging",
@@ -195,7 +195,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["debugging", "communication"],
     ),
 
-    # ─── 8. Vibe Coding Master — by xuzihan1 ────────────────────────
+    # ─── 8. Vibe Coding Master - by xuzihan1 ────────────────────────
     PromptPattern(
         name="Vibe Coding Master",
         category="vibe-coding",
@@ -215,7 +215,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["ai-tools", "web-development"],
     ),
 
-    # ─── 9. Code Review Specialist — by dragoy18 ────────────────────
+    # ─── 9. Code Review Specialist - by dragoy18 ────────────────────
     PromptPattern(
         name="Code Review Specialist",
         category="code-review",
@@ -235,7 +235,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "debugging"],
     ),
 
-    # ─── 10. File Analysis API (Node.js/Express) — by ketanp0306 ────
+    # ─── 10. File Analysis API (Node.js/Express) - by ketanp0306 ────
     PromptPattern(
         name="File Analysis API",
         category="backend",
@@ -254,7 +254,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["nodejs", "api"],
     ),
 
-    # ─── 11. Senior Java Backend Engineer — by night-20 ─────────────
+    # ─── 11. Senior Java Backend Engineer - by night-20 ─────────────
     PromptPattern(
         name="Senior Java Backend Engineer",
         category="backend",
@@ -275,7 +275,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["backend", "devops"],
     ),
 
-    # ─── 12. Code Review Expert — by emr3karatas ────────────────────
+    # ─── 12. Code Review Expert - by emr3karatas ────────────────────
     PromptPattern(
         name="Code Review Expert",
         category="code-review",
@@ -294,7 +294,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "debugging"],
     ),
 
-    # ─── 13. ESP32 UI Library Development — by koradeh ──────────────
+    # ─── 13. ESP32 UI Library Development - by koradeh ──────────────
     PromptPattern(
         name="ESP32 UI Library Development",
         category="embedded",
@@ -317,7 +317,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["api", "c", "embedded"],
     ),
 
-    # ─── 14. Bug Discovery Code Assistant — by weiruo-c ─────────────
+    # ─── 14. Bug Discovery Code Assistant - by weiruo-c ─────────────
     PromptPattern(
         name="Bug Discovery Code Assistant",
         category="debugging",
@@ -336,7 +336,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "debugging"],
     ),
 
-    # ─── 15. Deep Copy Functionality — by iambrysonlau ──────────────
+    # ─── 15. Deep Copy Functionality - by iambrysonlau ──────────────
     PromptPattern(
         name="Deep Copy Functionality Guide",
         category="education",
@@ -351,7 +351,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "data-structures"],
     ),
 
-    # ─── 16. Code Review Assistant (Turkish) — by k ─────────────────
+    # ─── 16. Code Review Assistant (Turkish) - by k ─────────────────
     PromptPattern(
         name="Code Review Assistant for Bug Detection",
         category="code-review",
@@ -372,7 +372,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "debugging"],
     ),
 
-    # ─── 17. MVC and SOLID Principles — by abdooo2235 ───────────────
+    # ─── 17. MVC and SOLID Principles - by abdooo2235 ───────────────
     PromptPattern(
         name="MVC and SOLID Principles Guide",
         category="architecture",
@@ -393,7 +393,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["architecture"],
     ),
 
-    # ─── 18. Developer Work Analysis from Git Diff — by jikelp ──────
+    # ─── 18. Developer Work Analysis from Git Diff - by jikelp ──────
     PromptPattern(
         name="Developer Work Analysis from Git Diff",
         category="git",
@@ -413,7 +413,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["git", "code-review"],
     ),
 
-    # ─── 19. Go Language Developer — by a26058031 ───────────────────
+    # ─── 19. Go Language Developer - by a26058031 ───────────────────
     PromptPattern(
         name="Go Language Developer",
         category="language-expert",
@@ -435,7 +435,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["go"],
     ),
 
-    # ─── 20. Code Translator — by woyxiang ──────────────────────────
+    # ─── 20. Code Translator - by woyxiang ──────────────────────────
     PromptPattern(
         name="Code Translator",
         category="translation",
@@ -454,7 +454,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "translation"],
     ),
 
-    # ─── 21. Optimize Large Data Reading — by bateyyat ──────────────
+    # ─── 21. Optimize Large Data Reading - by bateyyat ──────────────
     PromptPattern(
         name="Optimize Large Data Reading",
         category="performance",
@@ -473,7 +473,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["code-review", "data-analysis"],
     ),
 
-    # ─── 22. My-Skills (Turkish) — by ikavak ────────────────────────
+    # ─── 22. My-Skills (Turkish) - by ikavak ────────────────────────
     PromptPattern(
         name="Secure Coding Skills",
         category="security",
@@ -487,7 +487,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["security"],
     ),
 
-    # ─── 23. IdeaDice Generator — by loshu2003 ──────────────────────
+    # ─── 23. IdeaDice Generator - by loshu2003 ──────────────────────
     PromptPattern(
         name="Creative Dice Generator (IdeaDice)",
         category="creative-coding",
@@ -503,7 +503,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
         tags=["ai-tools", "creative"],
     ),
 
-    # ─── 24. UniApp Drag-and-Drop — by loshu2003 ────────────────────
+    # ─── 24. UniApp Drag-and-Drop - by loshu2003 ────────────────────
     PromptPattern(
         name="UniApp Drag-and-Drop Experience",
         category="mobile",
@@ -533,7 +533,7 @@ PROMPT_PATTERNS: list[PromptPattern] = [
             "Prioritized fix recommendations",
         ],
         rules=[
-            "No URL needed — works on open project source",
+            "No URL needed - works on open project source",
             "Cover all OWASP Top 10 categories",
             "Professional pentest report format",
         ],
@@ -566,7 +566,7 @@ STRUCTURAL_PATTERNS = {
         ],
     },
     "capabilities_list": {
-        "description": "Bulleted list of what the AI should do — actionable verbs",
+        "description": "Bulleted list of what the AI should do - actionable verbs",
         "pattern": "You will:\n- [ACTION_VERB] [SPECIFIC_THING]\n- [ACTION_VERB] [SPECIFIC_THING]",
         "key_verbs": [
             "Analyze", "Identify", "Suggest", "Evaluate", "Ensure", "Provide",
@@ -586,7 +586,7 @@ STRUCTURAL_PATTERNS = {
         ],
     },
     "variables_customization": {
-        "description": "Reusable parameters — make prompts adaptable",
+        "description": "Reusable parameters - make prompts adaptable",
         "pattern": "Variables:\n- {variable_name} - description",
         "common_variables": [
             "language", "framework", "focusArea", "codeSnippet",
@@ -744,11 +744,11 @@ CATEGORY_ENHANCEMENTS: dict[str, dict] = {
 # 5. ENHANCED SYSTEM PROMPT COMPONENTS (AI-Aware, Security-First)
 # ══════════════════════════════════════════════════════════════════════
 
-# AI-specific system prompt templates — each one crafted for optimal
+# AI-specific system prompt templates - each one crafted for optimal
 # output quality with that specific AI model family.
 #
 # DESIGN PHILOSOPHY (v3.0):
-#   Inspired by prompts.chat — clean, natural language prompts.
+#   Inspired by prompts.chat - clean, natural language prompts.
 #   NO XML templates, NO emoji frameworks, NO table scaffolding.
 #   The output must read like a well-written paragraph, not a form.
 
@@ -760,13 +760,13 @@ You are a prompt engineer. Turn the user's idea into a clean, effective prompt f
 RULES:
 - Output ONLY the prompt text. No intro, no explanation, no meta-commentary.
 - Write in the SAME LANGUAGE the user used.
-- Write INSTRUCTIONS for Claude — never write code or answer questions yourself.
-- If tech stack is in your context, mention it briefly as background — don't center the prompt on it.
+- Write INSTRUCTIONS for Claude - never write code or answer questions yourself.
+- If tech stack is in your context, mention it briefly as background - don't center the prompt on it.
 
-STYLE — write like the best prompts on prompts.chat:
+STYLE - write like the best prompts on prompts.chat:
 - Start with a clear role: "You are a [specific expert with credentials]..."
 - Describe the task in direct, natural paragraphs.
-- Use simple bullet points for rules and constraints — sparingly.
+- Use simple bullet points for rules and constraints - sparingly.
 - Include security best practices where relevant (input validation, auth, safe queries).
 - NEVER use XML tags, emoji, tables, numbered step frameworks, or template scaffolding.
 - Keep it clean, flowing, and professional. Every sentence must add value.
@@ -782,19 +782,19 @@ You are a prompt engineer. Turn the user's idea into a clean, effective prompt f
 RULES:
 - Output ONLY the prompt text. No intro, no explanation.
 - Write in the SAME LANGUAGE the user used.
-- Write INSTRUCTIONS for GPT — never code or answer questions yourself.
+- Write INSTRUCTIONS for GPT - never code or answer questions yourself.
 - If tech stack is in your context, weave it naturally as background.
 
-STYLE — write like the best prompts on prompts.chat:
+STYLE - write like the best prompts on prompts.chat:
 - Start with "You are a [specific expert]..."
 - Describe what GPT should do in clear, natural paragraphs.
-- Bullet points for rules — use sparingly.
+- Bullet points for rules - use sparingly.
 - Include security best practices where relevant.
 - NEVER use markdown headers (##), tables, emoji, checkboxes, or template scaffolding.
 - Be specific and actionable. Every word earns its place.
 
 EXAMPLE of the style you MUST follow:
-"You are an experienced full-stack developer. I'll describe what I want to build and you'll write clean, production-ready code. Follow the project's conventions and use idiomatic patterns. Handle errors gracefully and validate all user inputs. Never hardcode secrets — use environment variables. Include brief comments only where the code isn't self-explanatory."
+"You are an experienced full-stack developer. I'll describe what I want to build and you'll write clean, production-ready code. Follow the project's conventions and use idiomatic patterns. Handle errors gracefully and validate all user inputs. Never hardcode secrets - use environment variables. Include brief comments only where the code isn't self-explanatory."
 
 Write at that quality level. Clean, direct, no fluff, natural language only.""",
 
@@ -804,7 +804,7 @@ You are a prompt engineer. Turn the user's idea into a specification prompt for 
 RULES:
 - Output ONLY the specification. No intro, no commentary.
 - Write in the SAME LANGUAGE the user used.
-- Write SPECS for Codex to implement — never code yourself.
+- Write SPECS for Codex to implement - never code yourself.
 - If tech stack is in your context, state it briefly.
 
 STYLE:
@@ -821,19 +821,19 @@ You are a prompt engineer. Turn the user's idea into a clean, effective prompt f
 RULES:
 - Output ONLY the prompt text. No intro, no explanation.
 - Write in the SAME LANGUAGE the user used.
-- Write INSTRUCTIONS for Gemini — never code or answer questions yourself.
+- Write INSTRUCTIONS for Gemini - never code or answer questions yourself.
 - If tech stack is in your context, include it as brief background.
 
-STYLE — write like the best prompts on prompts.chat:
+STYLE - write like the best prompts on prompts.chat:
 - Start with a clear role and expertise.
 - Lay out the task in natural, flowing language.
-- For complex tasks, describe steps naturally in prose — not numbered framework scaffolding.
+- For complex tasks, describe steps naturally in prose - not numbered framework scaffolding.
 - Include quality and security expectations.
 - NEVER use tables, emoji, XML, markdown headers, or heavy template structure.
 - Be thorough but readable. Natural language only.
 
 EXAMPLE of the style you MUST follow:
-"You are a senior software architect with deep expertise in distributed systems. Help me design and implement scalable solutions. Think through each problem carefully — consider tradeoffs, edge cases, and failure modes before proposing a solution. Prioritize reliability and maintainability. Always consider security implications, especially data validation and access control."
+"You are a senior software architect with deep expertise in distributed systems. Help me design and implement scalable solutions. Think through each problem carefully - consider tradeoffs, edge cases, and failure modes before proposing a solution. Prioritize reliability and maintainability. Always consider security implications, especially data validation and access control."
 
 Write at that quality level. Thorough, natural, clean.""",
 
@@ -843,7 +843,7 @@ You are a prompt engineer. Turn the user's idea into a tight prompt for Grok.
 RULES:
 - Output ONLY the prompt. Zero fluff.
 - Same language as user.
-- Instructions only — no code, no answers.
+- Instructions only - no code, no answers.
 
 STYLE:
 - Direct and concise. Under 300 words.
@@ -858,10 +858,10 @@ You are a prompt engineer. Turn the user's idea into a prompt for o3/o4 reasonin
 RULES:
 - Output ONLY the prompt text. No intro, no explanation.
 - Write in the SAME LANGUAGE the user used.
-- Write INSTRUCTIONS — never code or answers yourself.
+- Write INSTRUCTIONS - never code or answers yourself.
 - If tech stack is in your context, include as background.
 
-STYLE — write like the best prompts on prompts.chat:
+STYLE - write like the best prompts on prompts.chat:
 - Start with role and expertise.
 - Describe the task with emphasis on reasoning through the problem.
 - Encourage step-by-step thinking naturally in prose.
@@ -876,10 +876,10 @@ You are a prompt engineer. Turn the user's idea into a clean, effective prompt f
 RULES:
 - Output ONLY the prompt text. No intro, no explanation, no commentary.
 - Write in the SAME LANGUAGE the user used.
-- Write INSTRUCTIONS for an AI — never code or answer questions yourself.
+- Write INSTRUCTIONS for an AI - never code or answer questions yourself.
 - If tech stack is in your context, include it briefly as background.
 
-STYLE — write like the best prompts on prompts.chat:
+STYLE - write like the best prompts on prompts.chat:
 - Start with "You are a [specific expert]..."
 - Describe the task in direct, natural language.
 - Use bullet points sparingly for key rules.
@@ -888,7 +888,7 @@ STYLE — write like the best prompts on prompts.chat:
 - Keep it clean, specific, and actionable. Every sentence adds value.
 
 EXAMPLE of the style you MUST follow:
-"You are a senior full-stack developer with strong security awareness. I'll describe features and you'll implement them with clean, production-ready code. Validate all inputs, use parameterized queries, and never hardcode secrets. Follow the project's existing conventions. Handle errors gracefully with meaningful messages. Write self-documenting code — add comments only where the logic isn't obvious."
+"You are a senior full-stack developer with strong security awareness. I'll describe features and you'll implement them with clean, production-ready code. Validate all inputs, use parameterized queries, and never hardcode secrets. Follow the project's existing conventions. Handle errors gracefully with meaningful messages. Write self-documenting code - add comments only where the logic isn't obvious."
 
 Write at that quality level. Direct, professional, natural language only.""",
 }
@@ -960,13 +960,13 @@ def get_relevant_patterns(vibe: str) -> list[PromptPattern]:
 
 
 def build_pattern_context(patterns: list[PromptPattern]) -> str:
-    """Build a minimal context hint from matched patterns — no structural guidance."""
+    """Build a minimal context hint from matched patterns - no structural guidance."""
     if not patterns:
         return ""
 
     lines = []
     for p in patterns[:2]:
-        lines.append(f"Related: {p.name} — {p.role}")
+        lines.append(f"Related: {p.name} - {p.role}")
     return "\n".join(lines)
 
 

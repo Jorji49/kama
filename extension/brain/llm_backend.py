@@ -1,8 +1,8 @@
 """
-Aether LLM Backend — llama-cpp-python direct inference
+Kama LLM Backend - llama-cpp-python direct inference
 
-Replaces Ollama entirely. GGUF models live in ~/.aether/models/.
-All agent guides / system prompts are injected at call-time — no external server needed.
+Replaces Ollama entirely. GGUF models live in ~/.kama/models/.
+All agent guides / system prompts are injected at call-time - no external server needed.
 """
 
 from __future__ import annotations
@@ -17,10 +17,10 @@ from typing import Generator
 log = logging.getLogger("llm_backend")
 
 # ── Storage directory ─────────────────────────────────────────────────
-MODELS_DIR = Path.home() / ".aether" / "models"
+MODELS_DIR = Path.home() / ".kama" / "models"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-# ── Curated GGUF catalog — CPU-optimised Q4_K_M quantisation ─────────
+# ── Curated GGUF catalog - CPU-optimised Q4_K_M quantisation ─────────
 GGUF_CATALOG: list[dict] = [
     {
         "id": "llama3.2-3b",
@@ -31,7 +31,7 @@ GGUF_CATALOG: list[dict] = [
             "/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
         ),
         "size": "2.0 GB",
-        "desc": "⭐ Best Pick — Fast, sharp, low RAM. Ideal for CPU.",
+        "desc": "⭐ Best Pick - Fast, sharp, low RAM. Ideal for CPU.",
         "tier": "recommended",
     },
     {
@@ -77,7 +77,7 @@ _llm = None
 _current_model_id: str = ""
 _load_lock = threading.Lock()
 
-# Setup/download progress — polled by /health
+# Setup/download progress - polled by /health
 _setup: dict = {
     "active": False,   # True while downloading
     "pct": 0,
@@ -149,7 +149,7 @@ def load_model(model_id: str) -> bool:
     global _llm, _current_model_id
     with _load_lock:
         try:
-            from llama_cpp import Llama  # deferred — optional install
+            from llama_cpp import Llama  # deferred - optional install
 
             p = model_file_path(model_id)
             if not p:
@@ -186,7 +186,7 @@ def load_model(model_id: str) -> bool:
 
 def auto_load() -> bool:
     """
-    Called at startup — load the first available downloaded model.
+    Called at startup - load the first available downloaded model.
     If no model is downloaded, automatically downloads llama3.2-1b in a
     background thread (non-blocking). Returns True only if a model was
     immediately loaded from disk.
@@ -196,7 +196,7 @@ def auto_load() -> bool:
         log.info("Auto-loading model '%s' …", mid)
         return load_model(mid)
 
-    # No model on disk — kick off background auto-download of the smallest model
+    # No model on disk - kick off background auto-download of the smallest model
     default = "llama3.2-1b"
     log.info("First run: auto-downloading model '%s' in background …", default)
     t = threading.Thread(target=_auto_download_and_load, args=(default,), daemon=True)
@@ -247,7 +247,7 @@ def generate(
 ) -> str:
     """Synchronous generation. Raises RuntimeError if no model is loaded."""
     if _llm is None:
-        raise RuntimeError("No model loaded — download and select a model first.")
+        raise RuntimeError("No model loaded - download and select a model first.")
     resp = _llm.create_chat_completion(
         messages=messages,
         max_tokens=max_tokens,
@@ -262,9 +262,9 @@ def generate_stream(
     max_tokens: int = 2048,
     temperature: float = 0.1,
 ) -> Generator[str, None, None]:
-    """Streaming generation — yields text tokens as they arrive."""
+    """Streaming generation - yields text tokens as they arrive."""
     if _llm is None:
-        raise RuntimeError("No model loaded — download and select a model first.")
+        raise RuntimeError("No model loaded - download and select a model first.")
     for chunk in _llm.create_chat_completion(
         messages=messages,
         max_tokens=max_tokens,
@@ -304,7 +304,7 @@ def download_model(
     log.info("Downloading '%s' from HuggingFace …", model_id)
 
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Aether/4.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Kama/4.0"})
         with urllib.request.urlopen(req, timeout=120) as resp:
             total = int(resp.headers.get("Content-Length", 0))
             downloaded = 0

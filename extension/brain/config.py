@@ -1,10 +1,10 @@
 """
-Aether Brain — Configuration
+Kama Brain - Configuration
 
 Centralises all environment-driven settings for the Brain server.
 Reads from `.env` when present, falls back to sensible defaults.
 
-Architecture: 100% LOCAL — llama-cpp-python, no external APIs or Ollama.
+Architecture: 100% LOCAL - llama-cpp-python, no external APIs or Ollama.
 """
 
 from __future__ import annotations
@@ -22,21 +22,21 @@ if _ENV_PATH.exists():
 class Settings:
     """Runtime settings resolved at import time from environment variables.
 
-    Note: AETHER_MODEL may be changed at runtime via the /model endpoint.
+    Note: KAMA_MODEL may be changed at runtime via the /model endpoint.
     All other fields should be treated as read-only after initialization.
     """
 
-    # ── Aether LLM (llama-cpp-python, GGUF) ───────────────────────────
+    # ── Kama LLM (llama-cpp-python, GGUF) ───────────────────────────────────
     # Model id from llm_backend.GGUF_CATALOG (e.g. "llama3.2-3b", "phi3.5-mini")
-    AETHER_MODEL: str = os.getenv("AETHER_MODEL", "llama3.2-1b")
+    KAMA_MODEL: str = os.getenv("KAMA_MODEL", "llama3.2-1b")
 
     # Max tokens for generated prompts.
     # 2048 = good balance for most tasks. Increase for complex architecture prompts.
-    AETHER_MAX_TOKENS: int = int(os.getenv("AETHER_MAX_TOKENS", "2048"))
+    KAMA_MAX_TOKENS: int = int(os.getenv("KAMA_MAX_TOKENS", "2048"))
 
     # Temperature (0.0-1.0). Lower = focused/consistent, Higher = creative/varied.
     # 0.1 is ideal for structured coding prompts.
-    AETHER_TEMPERATURE: float = float(os.getenv("AETHER_TEMPERATURE", "0.1"))
+    KAMA_TEMPERATURE: float = float(os.getenv("KAMA_TEMPERATURE", "0.1"))
 
     # ── Server ───────────────────────────────────────────────────────
     HOST: str = os.getenv("BRAIN_HOST", "127.0.0.1")

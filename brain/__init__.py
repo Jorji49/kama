@@ -1,9 +1,9 @@
 """
-Aether Brain Package
+Kama Brain Package
 ========================
 
 Local AI prompt engine that converts natural-language vibes into
-world-class, AI-family-optimized prompts via Ollama.
+world-class, AI-family-optimized prompts via llama-cpp-python.
 
 Modules
 -------
@@ -15,4 +15,4 @@ Modules
 - **config**                : Environment-driven settings.
 """
 
-__version__ = "3.0.0"
+__version__ = "4.0.0"

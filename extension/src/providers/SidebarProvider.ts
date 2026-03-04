@@ -1,5 +1,5 @@
-﻿/**
- * Aether — Sidebar Provider (v4.0)
+/**
+ * Kama - Sidebar Provider (v4.0)
  * Hardware-aware setup · Streaming token display · Quick-action chips
  * o3/reasoning model support · Perfect prompt rendering
  */
@@ -8,7 +8,7 @@ import * as vscode from "vscode";
 import { BrainClient, PromptResponse, HardwareProfileResponse, ContextResponse } from "../services/BrainClient";
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = "aether.vibePanel";
+  public static readonly viewType = "kama.vibePanel";
   private _view?: vscode.WebviewView;
   private _selectedAgent = "auto";
   private _selectedFamily = "auto";
@@ -20,8 +20,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     private readonly _brain: BrainClient,
     private readonly _ctx: vscode.ExtensionContext
   ) {
-    this._selectedAgent = this._ctx.globalState.get<string>("aether.agent", "auto");
-    this._selectedFamily = this._ctx.globalState.get<string>("aether.family", "auto");
+    this._selectedAgent = this._ctx.globalState.get<string>("kama.agent", "auto");
+    this._selectedFamily = this._ctx.globalState.get<string>("kama.family", "auto");
   }
 
   public resolveWebviewView(view: vscode.WebviewView): void {
@@ -46,20 +46,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     view.webview.onDidReceiveMessage(async (m) => {
       switch (m.command) {
         case "ready": {
-          // Webview JS has loaded — safe to send initial state
-          const setupDone = this._ctx.globalState.get<boolean>("aether.setupDone", false);
+          // Webview JS has loaded - safe to send initial state
+          const setupDone = this._ctx.globalState.get<boolean>("kama.setupDone", false);
           this._brain.healthCheck().then(h => {
             const ok = h.ok;
             this._post({ command: "status", online: ok, starting: h.setup, setupPct: h.setupPct, setupModel: h.setupModel });
             this._post({ command: "setAgent", agentId: this._selectedAgent, family: this._selectedFamily });
-            const saved = this._ctx.globalState.get<string[]>("aether.h", []);
+            const saved = this._ctx.globalState.get<string[]>("kama.h", []);
             if (saved.length) { this._post({ command: "restore", h: saved }); }
-            // Only show setup if it was never completed — don't re-show just because brain is offline
+            // Only show setup if it was never completed - don't re-show just because brain is offline
             if (!setupDone) {
               this._post({ command: "showSetup" });
               if (ok) { this._loadAll(); }
             } else {
-              const tutDone = this._ctx.globalState.get<boolean>("aether.tutorialDone", false);
+              const tutDone = this._ctx.globalState.get<boolean>("kama.tutorialDone", false);
               if (!tutDone) {
                 this._post({ command: "showTutorial" });
               }
@@ -85,20 +85,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           this._post({ command: "copied" });
           break;
         case "agent":
-          await vscode.commands.executeCommand("aether.sendToAgent", m.prompt);
+          await vscode.commands.executeCommand("kama.sendToAgent", m.prompt);
           this._post({ command: "agentSent" });
           break;
-        case "save": await this._ctx.globalState.update("aether.h", m.h); break;
-        case "settings": vscode.commands.executeCommand("workbench.action.openSettings", "aether"); break;
+        case "save": await this._ctx.globalState.update("kama.h", m.h); break;
+        case "settings": vscode.commands.executeCommand("workbench.action.openSettings", "kama"); break;
         case "loadModels": await this._loadAll(); break;
         case "loadHardware": await this._loadHardware(); break;
         case "selectModel": await this._selectModel(m.model); break;
         case "pullModel": await this._pullModel(m.model); break;
         case "finishSetup":
-          await this._ctx.globalState.update("aether.setupDone", true);
+          await this._ctx.globalState.update("kama.setupDone", true);
           break;
         case "finishTutorial":
-          await this._ctx.globalState.update("aether.tutorialDone", true);
+          await this._ctx.globalState.update("kama.tutorialDone", true);
           break;
         case "openSetup":
           this._post({ command: "showSetup" });
@@ -107,11 +107,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         case "selectAgent":
           this._selectedAgent = m.agentId || "auto";
           this._selectedFamily = m.family || "auto";
-          await this._ctx.globalState.update("aether.agent", this._selectedAgent);
-          await this._ctx.globalState.update("aether.family", this._selectedFamily);
+          await this._ctx.globalState.update("kama.agent", this._selectedAgent);
+          await this._ctx.globalState.update("kama.family", this._selectedFamily);
           break;
         case "startBrain":
-          await vscode.commands.executeCommand("aether.startBrain");
+          await vscode.commands.executeCommand("kama.startBrain");
           break;
         case "chain":
           this._chainContext = m.prompt || "";
@@ -121,29 +121,29 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           this._chainContext = "";
           break;
         case "getHistory": {
-          const allH = this._ctx.globalState.get<any[]>("aether.history", []);
+          const allH = this._ctx.globalState.get<any[]>("kama.history", []);
           this._post({ command: "historyData", items: allH });
           break;
         }
         case "toggleFav": {
-          const hist = this._ctx.globalState.get<any[]>("aether.history", []);
+          const hist = this._ctx.globalState.get<any[]>("kama.history", []);
           const idx = hist.findIndex((h: any) => h.id === m.id);
           if (idx >= 0) { hist[idx].fav = !hist[idx].fav; }
-          await this._ctx.globalState.update("aether.history", hist);
+          await this._ctx.globalState.update("kama.history", hist);
           this._post({ command: "historyData", items: hist });
           break;
         }
         case "deleteHistItem": {
-          let hh = this._ctx.globalState.get<any[]>("aether.history", []);
+          let hh = this._ctx.globalState.get<any[]>("kama.history", []);
           hh = hh.filter((h: any) => h.id !== m.id);
-          await this._ctx.globalState.update("aether.history", hh);
+          await this._ctx.globalState.update("kama.history", hh);
           this._post({ command: "historyData", items: hh });
           break;
         }
         case "saveHist": {
-          const cur = this._ctx.globalState.get<any[]>("aether.history", []);
+          const cur = this._ctx.globalState.get<any[]>("kama.history", []);
           cur.unshift(m.item);
-          await this._ctx.globalState.update("aether.history", cur.slice(0, 100));
+          await this._ctx.globalState.update("kama.history", cur.slice(0, 100));
           break;
         }
         case "prefill":
@@ -196,7 +196,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     this._post({ command: "loading", on: true });
 
     const chainCtx = this._chainContext;
-    // Don't consume chain context yet — only if stream succeeds
+    // Don't consume chain context yet - only if stream succeeds
 
     try {
       this._cancelStream = this._brain.sendVibeStream(
@@ -218,16 +218,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
               grade: event.grade ?? "",
               security: event.security ?? "PASS",
             });
-            const autoSend = vscode.workspace.getConfiguration("aether").get<boolean>("autoSendToAgent", false);
+            const autoSend = vscode.workspace.getConfiguration("kama").get<boolean>("autoSendToAgent", false);
             if (autoSend) {
-              vscode.commands.executeCommand("aether.sendToAgent", prompt);
+              vscode.commands.executeCommand("kama.sendToAgent", prompt);
             }
           } else if (event.type === "error") {
             this._cancelStream = null;
             this._post({ command: "err", msg: event.message ?? "Unknown error" });
             this._post({ command: "loading", on: false });
           } else if (event.type === "end") {
-            // Stream closed without a done/error event — unlock UI cleanly
+            // Stream closed without a done/error event - unlock UI cleanly
             this._cancelStream = null;
             this._post({ command: "loading", on: false });
           }
@@ -253,7 +253,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  // Static catalog — used as fallback when Brain is offline
+  // Static catalog - used as fallback when Brain is offline
   private static readonly FALLBACK_CATALOG = [
     { name: "llama3.2-3b", desc: "\u2B50 Recommended \u2014 Great quality/speed balance.", size: "2.0 GB", installed: false },
     { name: "llama3.2-1b", desc: "\u26A1 Fast \u2014 Quick prompt generation, low RAM.", size: "1.3 GB", installed: false },
@@ -281,7 +281,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       const hw = await this._brain.getHardware();
       this._post({ command: "hardware", data: hw });
     } catch {
-      // Hardware profile unavailable — silently ignore
+      // Hardware profile unavailable - silently ignore
     }
   }
 
@@ -296,7 +296,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   private async _selectModel(model: string): Promise<void> {
     try {
       await this._brain.setModel(model);
-      await vscode.workspace.getConfiguration("aether").update("model", model, vscode.ConfigurationTarget.Global);
+      await vscode.workspace.getConfiguration("kama").update("model", model, vscode.ConfigurationTarget.Global);
       this._post({ command: "modelSet", model });
     } catch (e: unknown) {
       this._post({ command: "err", msg: e instanceof Error ? e.message : String(e) });
@@ -561,7 +561,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
 
 <!-- Header -->
 <div class="hdr">
-  <div class="hdr-logo">${L20}<span>Aether</span></div>
+  <div class="hdr-logo">${L20}<span>Kama</span></div>
   <div class="hdr-st"><span class="dot off" id="D"></span><span id="SL">Offline</span></div>
   <button class="ib" id="bHist" title="Prompt History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
   <button class="ib" id="bSet" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
@@ -572,7 +572,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
 <div class="aw" id="AW">
   <div class="ab" id="AB">
     <span class="ab-dot" id="abDot" style="background:#666"></span>
-    <span class="ab-name" id="abName">Auto — Universal</span>
+    <span class="ab-name" id="abName">Auto - Universal</span>
     <svg class="ab-arrow" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 1l4 4 4-4"/></svg>
   </div>
   <div class="ap" id="AP"></div>
@@ -582,8 +582,8 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
 <div class="view" id="V_SETUP">
   <div class="setup">
     <div class="setup-logo">${L56}</div>
-    <h2>Welcome to Aether</h2>
-    <p class="sub">100% local AI prompt optimizer.<br/>Select a model below — smaller models are faster, larger models produce better prompts.</p>
+    <h2>Welcome to Kama</h2>
+    <p class="sub">100% local AI prompt optimizer.<br/>Select a model below - smaller models are faster, larger models produce better prompts.</p>
     <div class="tabs">
       <button class="tab active" data-tab="installed">Installed</button>
       <button class="tab" data-tab="available">Available</button>
@@ -595,7 +595,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
       <div class="model-list" id="ML_AVAIL"><div class="setup-msg">Loading...</div></div>
     </div>
     <button class="setup-btn" id="setupDone" disabled>Get Started</button>
-    <p class="setup-tip">Models are stored locally in ~/.aether/models/</p>
+    <p class="setup-tip">Models are stored locally in ~/.kama/models/</p>
   </div>
 </div>
 
@@ -603,7 +603,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
 <div class="offline-banner" id="OB">
   <div class="ob-icon" id="OB_ICON"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
   <div class="ob-title" id="OB_TITLE">Brain Server Offline</div>
-  <div class="ob-desc" id="OB_DESC">Aether Brain is not running.<br/>It will start automatically when found.</div>
+  <div class="ob-desc" id="OB_DESC">Kama Brain is not running.<br/>It will start automatically when found.</div>
   <div class="setup-progress" id="OB_PROG" style="display:none">
     <div class="sp-label" id="OB_PROG_LBL">Downloading model... 0%</div>
     <div class="sp-track"><div class="sp-fill" id="OB_PROG_FILL"></div></div>
@@ -619,21 +619,21 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   <div class="tut">
     <div class="tut-slide active" data-slide="0">
       <div class="tut-icon i1">&#9889;</div>
-      <h3>Welcome to Aether</h3>
-      <p class="tut-desc">Aether transforms your ideas into perfectly crafted prompts for any AI coding assistant — 100% locally on your machine.</p>
-      <div class="tut-tip"><b>How it works:</b> Describe what you want to build, pick a target AI model, and Aether generates a production-quality prompt optimized for that model.</div>
+      <h3>Welcome to Kama</h3>
+      <p class="tut-desc">Kama transforms your ideas into perfectly crafted prompts for any AI coding assistant - 100% locally on your machine.</p>
+      <div class="tut-tip"><b>How it works:</b> Describe what you want to build, pick a target AI model, and Kama generates a production-quality prompt optimized for that model.</div>
     </div>
     <div class="tut-slide" data-slide="1">
       <div class="tut-icon i2">&#128193;</div>
       <h3>Project-Aware Prompts</h3>
-      <p class="tut-desc">If you open Aether inside a project workspace, it automatically detects your tech stack and languages.</p>
-      <div class="tut-tip"><b>Pro tip:</b> Open your project folder in VS Code <b>before</b> using Aether. It will detect files like <code>package.json</code>, <code>requirements.txt</code>, <code>Cargo.toml</code> etc. and include your tech stack as context in the prompt.</div>
+      <p class="tut-desc">If you open Kama inside a project workspace, it automatically detects your tech stack and languages.</p>
+      <div class="tut-tip"><b>Pro tip:</b> Open your project folder in VS Code <b>before</b> using Kama. It will detect files like <code>package.json</code>, <code>requirements.txt</code>, <code>Cargo.toml</code> etc. and include your tech stack as context in the prompt.</div>
     </div>
     <div class="tut-slide" data-slide="2">
       <div class="tut-icon i3">&#127919;</div>
       <h3>Choose Your AI Target</h3>
-      <p class="tut-desc">Each AI has different strengths. Pick which AI you'll paste the prompt into — Aether optimizes the output accordingly.</p>
-      <div class="tut-tip"><b>Claude</b> — constraint-rich, thorough<br/><b>GPT</b> — persona-driven, versatile<br/><b>Gemini</b> — reasoning-focused<br/><b>Grok</b> — ultra-concise<br/><b>Auto</b> — works with any AI</div>
+      <p class="tut-desc">Each AI has different strengths. Pick which AI you'll paste the prompt into - Kama optimizes the output accordingly.</p>
+      <div class="tut-tip"><b>Claude</b> - constraint-rich, thorough<br/><b>GPT</b> - persona-driven, versatile<br/><b>Gemini</b> - reasoning-focused<br/><b>Grok</b> - ultra-concise<br/><b>Auto</b> - works with any AI</div>
     </div>
     <div class="tut-slide" data-slide="3">
       <div class="tut-icon i4">&#128161;</div>
@@ -655,7 +655,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     <div class="empty" id="E">
       ${L40}
       <h3>What do you want to build?</h3>
-      <p>Describe your idea. Aether turns it into a perfect prompt for your AI agent.</p>
+      <p>Describe your idea. Kama turns it into a perfect prompt for your AI agent.</p>
     </div>
   </div>
   <div class="loader" id="LDR">
@@ -674,7 +674,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   </div>
   <div class="input-area">
     <div class="input-wrap">
-      <textarea id="I" rows="1" placeholder="Message Aether..."></textarea>
+      <textarea id="I" rows="1" placeholder="Message Kama..."></textarea>
       <button class="send" id="G"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button>
     </div>
   </div>
@@ -694,7 +694,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
 </div>
 <div class="foot">
   <div class="foot-left"><span>100% Local</span></div>
-  <span class="foot-model" id="FM" title="Change model">aether</span>
+  <span class="foot-model" id="FM" title="Change model">kama</span>
 </div>
 
 <script nonce="${n}">
@@ -748,7 +748,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   /* ── Agent panel rendering ── */
   function renderPanel(){
     var h='<div class="ap-auto'+(curAgent==='auto'?' sel':'')+'" data-aid="auto" data-fam="auto">';
-    h+='<div class="ap-ck"></div><div class="ap-auto-n">Auto — Universal</div></div>';
+    h+='<div class="ap-ck"></div><div class="ap-auto-n">Auto - Universal</div></div>';
     for(var gi=0;gi<AG.length;gi++){
       var g=AG[gi];
       if(gi>0)h+='<div class="ag-sep"></div>';
@@ -766,14 +766,14 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
   }
 
   function findAgent(id){
-    if(id==='auto')return{n:'Auto — Universal',c:'#666',f:'auto'};
+    if(id==='auto')return{n:'Auto - Universal',c:'#666',f:'auto'};
     for(var gi=0;gi<AG.length;gi++){
       var g=AG[gi];
       for(var ai=0;ai<g.a.length;ai++){
         if(g.a[ai].i===id)return{n:g.a[ai].n,c:g.c,f:g.a[ai].f};
       }
     }
-    return{n:'Auto — Universal',c:'#666',f:'auto'};
+    return{n:'Auto - Universal',c:'#666',f:'auto'};
   }
 
   function updateBar(){
@@ -933,7 +933,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     ti=setInterval(function(){LTM.textContent=((Date.now()-t0)/1000|0)+'s'},300);
     /* Show thinking indicator immediately */
     var thk=document.createElement('div');thk.className='msg msg-a thinking-msg';
-    thk.innerHTML='<div class="from"><span>Aether</span></div><div class="po"><span class="thinking-dots">Thinking<span>.</span><span>.</span><span>.</span></span></div>';
+    thk.innerHTML='<div class="from"><span>Kama</span></div><div class="po"><span class="thinking-dots">Thinking<span>.</span><span>.</span><span>.</span></span></div>';
     thk.id='_thk';E.style.display='none';F.appendChild(thk);sb();
   }
   function unlock(){
@@ -959,7 +959,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     var d=document.createElement('div');d.className='msg msg-a';d.setAttribute('data-prompt',prompt);
     var now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     var info=findAgent(curAgent);
-    var h='<div class="from"><span>Aether</span><span class="time">'+now+'</span></div>';
+    var h='<div class="from"><span>Kama</span><span class="time">'+now+'</span></div>';
     h+='<div class="po">'+hl(prompt)+'</div>';
     h+='<div class="meta">';
     if(curAgent!=='auto')h+='<span class="tag">'+esc(info.n)+'</span>';
@@ -978,12 +978,12 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     vs.postMessage({command:'saveHist',item:{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),vibe:_lastVibe,prompt:prompt,agent:info.n,grade:grade||'',ts:Date.now(),fav:false}});
   }
 
-  /* addPRestore — same as addP but skips saving to full history (prevents duplicates on restore) */
+  /* addPRestore - same as addP but skips saving to full history (prevents duplicates on restore) */
   function addPRestore(prompt,ms,model,agent,quality,grade,security){
     var d=document.createElement('div');d.className='msg msg-a';d.setAttribute('data-prompt',prompt);
     var now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     var info=findAgent(curAgent);
-    var h='<div class="from"><span>Aether</span><span class="time">'+now+'</span></div>';
+    var h='<div class="from"><span>Kama</span><span class="time">'+now+'</span></div>';
     h+='<div class="po">'+hl(prompt)+'</div>';
     h+='<div class="meta">';
     if(curAgent!=='auto')h+='<span class="tag">'+esc(info.n)+'</span>';
@@ -1015,7 +1015,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     if(!_streamEl){
       _streamEl=document.createElement('div');_streamEl.className='msg msg-a streaming';
       var now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-      _streamEl.innerHTML='<div class="from"><span>Aether</span><span class="time">'+now+'</span></div><div class="po stream-text"></div>';
+      _streamEl.innerHTML='<div class="from"><span>Kama</span><span class="time">'+now+'</span></div><div class="po stream-text"></div>';
       E.style.display='none';F.appendChild(_streamEl);
     }
     _streamBuf+=t;
@@ -1128,14 +1128,14 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
         if(pct>0){
           SL.textContent='Downloading '+pct+'%';
           $('OB_TITLE').textContent='Downloading Model';
-          $('OB_DESC').textContent=(mdl?mdl+' — ':'')+'This happens once. Please wait…';
+          $('OB_DESC').textContent=(mdl?mdl+' - ':'')+'This happens once. Please wait…';
           $('OB_PROG').style.display='';
           $('OB_PROG_LBL').textContent='Downloading model… '+pct+'%';
           $('OB_PROG_FILL').style.width=pct+'%';
         } else {
           SL.textContent='Starting…';
           $('OB_TITLE').textContent='Starting Brain Server';
-          $('OB_DESC').textContent='Aether is starting in the background…';
+          $('OB_DESC').textContent='Kama is starting in the background…';
           $('OB_PROG').style.display='none';
         }
         OB.classList.add('show');
@@ -1147,7 +1147,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
         SL.textContent='Offline';
         D.style.background='';
         $('OB_TITLE').textContent='Brain Server Offline';
-        $('OB_DESC').textContent='Aether Brain is not running.<br/>It will start automatically when found.';
+        $('OB_DESC').textContent='Kama Brain is not running.<br/>It will start automatically when found.';
         $('OB_PROG').style.display='none';
         OB.classList.add('show');
         brainStarting=false;
@@ -1214,7 +1214,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     }
   });
 
-  /* Init — signal extension host that JS is ready */
+  /* Init - signal extension host that JS is ready */
   var _gotStatus=false;
   window.addEventListener('message',function _statusWatcher(e){
     if(e.data&&e.data.command==='status'){_gotStatus=true}

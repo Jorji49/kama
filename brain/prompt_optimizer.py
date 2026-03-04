@@ -1,5 +1,5 @@
 """
-Aether Brain — AI-Specific Prompt Optimizer
+Kama Brain - AI-Specific Prompt Optimizer
 
 Each AI model has unique strengths, formatting preferences, and optimization
 techniques. This module generates world-class prompts tailored for EACH target AI.
@@ -104,9 +104,9 @@ Security: Validate all inputs, use parameterized queries, never hardcode secrets
             "Follow OWASP Top 10 security guidelines",
         ),
         anti_patterns=(
-            "Avoid 'Please' or overly polite language — Claude responds to clear directives",
-            "Don't use JSON for structuring — XML tags work better with Claude",
-            "Avoid vague 'be helpful' instructions — be specific about behavior",
+            "Avoid 'Please' or overly polite language - Claude responds to clear directives",
+            "Don't use JSON for structuring - XML tags work better with Claude",
+            "Avoid vague 'be helpful' instructions - be specific about behavior",
         ),
     ),
 
@@ -157,9 +157,9 @@ Security: Validate and sanitize all inputs, use parameterized queries, never exp
             "Apply Content Security Policy headers",
         ),
         anti_patterns=(
-            "Don't use XML tags — GPT responds best to markdown",
-            "Avoid extremely long system prompts — GPT can lose focus",
-            "Don't ask GPT to 'not do' things — tell it what TO do",
+            "Don't use XML tags - GPT responds best to markdown",
+            "Avoid extremely long system prompts - GPT can lose focus",
+            "Don't ask GPT to 'not do' things - tell it what TO do",
         ),
     ),
 
@@ -204,13 +204,13 @@ Constraints:
 Security: Validate all inputs, parameterized queries only, no hardcoded secrets, proper auth on every endpoint. {output_format}""",
         security_constraints=(
             "All user inputs validated and sanitized",
-            "No hardcoded secrets — use environment variables",
+            "No hardcoded secrets - use environment variables",
             "SQL injection prevention via parameterized queries",
             "XSS prevention via output encoding",
             "Rate limiting on authentication endpoints",
         ),
         anti_patterns=(
-            "Don't write prose — Codex wants specifications, not explanations",
+            "Don't write prose - Codex wants specifications, not explanations",
             "Always include file paths and function signatures",
             "Include test cases as part of the specification",
         ),
@@ -265,9 +265,9 @@ Security: Validate all inputs, encrypt sensitive data, use parameterized queries
             "Use only trusted, up-to-date dependencies",
         ),
         anti_patterns=(
-            "Don't use XML — Gemini prefers markdown and tables",
+            "Don't use XML - Gemini prefers markdown and tables",
             "Include explicit 'think step by step' for complex tasks",
-            "Avoid overly nested structures — keep flat and scannable",
+            "Avoid overly nested structures - keep flat and scannable",
         ),
     ),
 
@@ -305,13 +305,13 @@ Quality: {quality_gates}
 
 Security: Sanitize all inputs, parameterized queries only, no hardcoded secrets, validate auth on every endpoint. {output_format}""",
         security_constraints=(
-            "Sanitize all inputs — no eval/exec with user data",
+            "Sanitize all inputs - no eval/exec with user data",
             "Parameterized queries only",
-            "No hardcoded secrets — use env vars",
+            "No hardcoded secrets - use env vars",
             "Validate auth on every protected endpoint",
         ),
         anti_patterns=(
-            "Don't be verbose — Grok likes direct, concise instructions",
+            "Don't be verbose - Grok likes direct, concise instructions",
             "Skip preambles and philosophical context",
             "Get to the point quickly",
         ),
@@ -358,14 +358,14 @@ Security: Validate all inputs with strict type checking, use parameterized queri
         security_constraints=(
             "Validate all user inputs with strict type checking",
             "Use parameterized queries for all database operations",
-            "No hardcoded secrets — environment variables only",
+            "No hardcoded secrets - environment variables only",
             "Rate limiting required on authentication endpoints",
             "Principle of least privilege throughout codebase",
         ),
         anti_patterns=(
-            "Don't skip reasoning steps — o3/o4 excels at chain-of-thought",
-            "Don't be vague — specify exact types, interfaces, and contracts",
-            "Don't omit verification — ask it to double-check its own output",
+            "Don't skip reasoning steps - o3/o4 excels at chain-of-thought",
+            "Don't be vague - specify exact types, interfaces, and contracts",
+            "Don't omit verification - ask it to double-check its own output",
         ),
     ),
 
@@ -446,7 +446,7 @@ TECHNIQUES: dict[str, PromptTechnique] = {
     "constraint_anchoring": PromptTechnique(
         name="Constraint Anchoring",
         description="Place critical constraints at both beginning and end of prompt",
-        when_to_use="All prompts — especially when constraints are critical",
+        when_to_use="All prompts - especially when constraints are critical",
         injection_template="CRITICAL: {constraint}\n...\nREMINDER: {constraint}",
         effectiveness_score=0.8,
     ),
@@ -459,7 +459,7 @@ TECHNIQUES: dict[str, PromptTechnique] = {
     ),
     "negative_constraints": PromptTechnique(
         name="Negative Constraints",
-        description="Explicitly state what NOT to do — prevents common AI failure modes",
+        description="Explicitly state what NOT to do - prevents common AI failure modes",
         when_to_use="Code generation, where AIs tend to add boilerplate or hallucinate",
         injection_template="DO NOT:\n- Generate placeholder or TODO comments\n- Use deprecated APIs or patterns\n- Include unnecessary dependencies\n- Hardcode configuration values\n- Skip error handling",
         effectiveness_score=0.75,
@@ -467,7 +467,7 @@ TECHNIQUES: dict[str, PromptTechnique] = {
     "output_scaffolding": PromptTechnique(
         name="Output Scaffolding",
         description="Provide the exact structure of the expected output",
-        when_to_use="When output format is critical — APIs, reports, code files",
+        when_to_use="When output format is critical - APIs, reports, code files",
         injection_template="Your response must follow this exact structure:\n{scaffold}",
         effectiveness_score=0.9,
     ),
@@ -505,13 +505,13 @@ _LANG_SECURITY: dict[str, list[str]] = {
         "Use Content-Security-Policy headers",
         "Sanitize HTML output with DOMPurify or equivalent",
         "Use 'strict' mode in all modules",
-        "Never use innerHTML with user data — use textContent",
+        "Never use innerHTML with user data - use textContent",
         "Validate all URL parameters and query strings",
     ],
     "typescript": [
         "Enable strict TypeScript compiler options",
         "Use Content-Security-Policy headers",
-        "Sanitize HTML output — never trust user input in templates",
+        "Sanitize HTML output - never trust user input in templates",
         "Use Zod or similar for runtime input validation",
         "Type-check all API boundaries",
     ],
@@ -660,7 +660,7 @@ def score_prompt_quality(prompt: str) -> QualityScore:
         if indicator in low:
             task_score = min(20.0, task_score + points)
 
-    # 3. Structure (0-20) — reward clean organization, not heavy headers
+    # 3. Structure (0-20) - reward clean organization, not heavy headers
     structure_score = 0.0
     # Paragraphs (2+ newlines = paragraph break)
     paragraphs = len(re.findall(r"\n\n", prompt))

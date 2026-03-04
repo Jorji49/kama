@@ -1,5 +1,5 @@
 /**
- * Aether — Brain Client
+ * Kama - Brain Client
  * HTTP client for the local Python Brain (FastAPI + llama-cpp-python).
  * Health checks use separate connections and never interfere with active requests.
  */
@@ -167,7 +167,7 @@ export class BrainClient {
 
   /**
    * Stream vibe via SSE. Calls onEvent for each token/done/error event.
-   * Returns a cancel function — call it to abort the stream.
+   * Returns a cancel function - call it to abort the stream.
    */
   public sendVibeStream(
     vibe: string,
@@ -338,7 +338,7 @@ export class BrainClient {
   }
 
   /**
-   * Tracked fetch — used for vibe requests only.
+   * Tracked fetch - used for vibe requests only.
    * Stored in _vibeRequest so abort() can cancel it.
    */
   private _fetchTracked<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -349,7 +349,7 @@ export class BrainClient {
   }
 
   /**
-   * Fire-and-forget fetch — used for health checks, model ops, etc.
+   * Fire-and-forget fetch - used for health checks, model ops, etc.
    * Does NOT touch _vibeRequest, so it never interferes with ongoing vibes.
    */
   private _fire<T>(method: string, path: string, body?: unknown, timeoutMs: number = BrainClient.TIMEOUT_MS, baseOverride?: string): Promise<T> {
