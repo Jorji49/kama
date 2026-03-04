@@ -107,6 +107,12 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
+      // Prevent double-start: if brain is already starting, don't create another terminal
+      if (isBrainStarting()) {
+        vscode.window.showInformationMessage("Aether Brain is already starting. Please wait…");
+        return;
+      }
+
       // Kill existing Aether Brain terminal to avoid stale sessions / port conflicts
       const existing = vscode.window.terminals.find(t => t.name === "Aether Brain");
       if (existing) { existing.dispose(); }
@@ -129,6 +135,7 @@ export function activate(context: vscode.ExtensionContext): void {
         terminal.sendText(`${cdCmd} && (${depCheck} 2>/dev/null || ${pipInstall}) && ${startCmd}`);
       }
       terminal.show(true); // Show terminal so user can see startup progress
+      markBrainStarting();
       sidebarProvider.updateBrainStatus(false, true);
     })
   );
@@ -175,10 +182,29 @@ export function activate(context: vscode.ExtensionContext): void {
   // ── Resilient Health Check + Auto-start ──────────────────────────
   // On first activation: if brain is unreachable, auto-start it silently.
   // During model setup: poll every 5 s and report download progress to UI.
+  // _brainStartingAt: timestamp when startBrain was invoked — keeps UI in
+  // "starting" state until brain responds OK or a generous timeout elapses.
   let failCount = 0;
   let wasOnline = false;
   let _autoStarted = false;
+  let _brainStartingAt = 0;          // 0 = not starting
   const MAX_FAILS = 3;
+  const START_TIMEOUT_MS = 120_000;   // 2 min — covers download + model load
+
+  /** Mark brain as "starting" — called by the startBrain command. */
+  function markBrainStarting(): void {
+    _brainStartingAt = Date.now();
+  }
+
+  /** True while we're waiting for the brain to come online after startBrain. */
+  function isBrainStarting(): boolean {
+    return _brainStartingAt > 0 && Date.now() - _brainStartingAt < START_TIMEOUT_MS;
+  }
+
+  /** Clear the starting flag (brain came online or timed out). */
+  function clearBrainStarting(): void {
+    _brainStartingAt = 0;
+  }
 
   async function doHealthCheck(): Promise<void> {
     try {
@@ -186,6 +212,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (h.ok) {
         failCount = 0;
         wasOnline = true;
+        clearBrainStarting();
         sidebarProvider.updateBrainStatus(true);
       } else if (h.setup) {
         failCount = 0;
@@ -195,18 +222,27 @@ export function activate(context: vscode.ExtensionContext): void {
         if (wasOnline && failCount >= MAX_FAILS) {
           wasOnline = false;
         }
+        // If we recently triggered startBrain, keep showing "starting" state
+        if (isBrainStarting()) {
+          sidebarProvider.updateBrainStatus(false, true);
+        } else {
+          sidebarProvider.updateBrainStatus(false);
+          if (!_autoStarted && failCount >= 1) {
+            _autoStarted = true;
+            vscode.commands.executeCommand("aether.startBrain");
+          }
+        }
+      }
+    } catch {
+      failCount++;
+      if (isBrainStarting()) {
+        sidebarProvider.updateBrainStatus(false, true);
+      } else {
         sidebarProvider.updateBrainStatus(false);
         if (!_autoStarted && failCount >= 1) {
           _autoStarted = true;
           vscode.commands.executeCommand("aether.startBrain");
         }
-      }
-    } catch {
-      failCount++;
-      sidebarProvider.updateBrainStatus(false);
-      if (!_autoStarted && failCount >= 1) {
-        _autoStarted = true;
-        vscode.commands.executeCommand("aether.startBrain");
       }
     }
   }

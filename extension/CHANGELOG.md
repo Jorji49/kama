@@ -2,6 +2,18 @@
 
 All notable changes to Aether Prompt Generator will be documented in this file.
 
+## [2.1.1] - 2026-03-04
+
+### Fixed
+- **Brain server crash on startup** — Replaced deprecated `@app.on_event("startup")` with modern FastAPI `lifespan` context manager. Server was starting then immediately shutting down with newer uvicorn/FastAPI versions
+- **Start button resets during startup** — Button now stays blue/disabled ("Starting…") until the Brain is fully online or a 2-minute timeout expires. Previously, health check failures would reset the button to green, letting users click it repeatedly
+- **Double brain start** — Pressing "Start Brain" while already starting now shows an info message instead of spawning another terminal
+- **Unused imports** — Removed dead `import concurrent.futures` from `sslm_engine.py`
+- **Hardware profiler recommending unavailable models** — `MODEL_CATALOG` now only contains the 4 models that can actually be downloaded through the app (was listing 14 models including Ollama-only ones like phi4, deepseek-r1, mistral)
+- **Unused variable** — Removed dead `cpu_freq` assignment in `hardware_profiler.py`
+- **Stale docstring** — Hardware profiler docstring updated from "Ollama" to "GGUF"
+- **Extension brain copy out of sync** — `extension/brain/` files now match `brain/` exactly
+
 ## [2.1.0] - 2026-03-04
 
 ### Added

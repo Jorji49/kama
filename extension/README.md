@@ -28,6 +28,7 @@ Aether turns your rough ideas into production-ready AI prompts. Type something l
 - **Active File Context** — Aether reads your currently open file and feeds it to the AI for more relevant prompts
 - **Keyboard Shortcut** — `Ctrl+Shift+A` generates a prompt from your current file or selection
 - **Onboarding Tutorial** — 4-slide walkthrough for first-time users
+- **Resilient Startup** — Start button stays in "Starting…" state until Brain is fully online; no more accidental double-starts
 
 ### Agent & Model Support
 - **Multi-IDE Support** — Works with Cursor, Windsurf, Claude Code, GitHub Copilot, and VS Code

@@ -21,6 +21,7 @@ import json
 import queue
 import uuid
 from collections import defaultdict
+from contextlib import asynccontextmanager
 
 import llm_backend
 from fastapi import FastAPI, Request
@@ -51,7 +52,17 @@ from security_auditor import audit_vibe, Verdict
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-7s %(message)s")
 log = logging.getLogger("brain")
 
-app = FastAPI(title="Aether Brain", version="3.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Modern lifespan handler — replaces deprecated on_event('startup')."""
+    # Startup: auto-load or auto-download the default model
+    await asyncio.to_thread(llm_backend.auto_load)
+    yield
+    # Shutdown: nothing special needed
+
+
+app = FastAPI(title="Aether Brain", version="4.0.0", lifespan=lifespan)
 
 # ── Security: CORS restricted to localhost + VS Code extension origins ──
 # Note: allow_origins expects exact strings or "*". Port-wildcards are not
@@ -217,15 +228,6 @@ class PromptResponse(BaseModel):
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def _startup():
-    """
-    Auto-load or auto-download the default model on startup.
-    Non-blocking — download runs in background thread via llm_backend.auto_load().
-    """
-    await asyncio.to_thread(llm_backend.auto_load)
-
 
 @app.get("/health")
 async def health():
@@ -600,7 +602,6 @@ async def vibe_stream(req: VibeRequest, request: Request):
                 finally:
                     token_q.put(None)
 
-            import concurrent.futures
             loop = asyncio.get_running_loop()
             fut = loop.run_in_executor(None, _run_stream)
 

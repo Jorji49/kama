@@ -2,7 +2,7 @@
 Aether Brain — Hardware Profiler & AI Model Recommender
 
 Detects local PC specs (RAM, CPU, GPU/VRAM) and recommends the optimal
-Ollama model based on available hardware resources.
+GGUF model based on available hardware resources.
 
 Architecture: 100% LOCAL — reads system hardware, no network required.
 """
@@ -33,28 +33,18 @@ class ModelSpec:
     tags: list[str] = field(default_factory=list)
 
 
+# NOTE: Only models present in llm_backend.GGUF_CATALOG should be listed here.
+# These are the models that can actually be downloaded and run locally.
 MODEL_CATALOG: list[ModelSpec] = [
     # Ultra-light (runs on anything)
-    ModelSpec("llama3.2-1b",    "Tiny, instant responses. Simple prompts.",            "1.3 GB",  3.0, 0, 1, 5, "general",     ["tiny", "fast"]),
-    ModelSpec("deepseek-r1:1.5b","Reasoning-focused. Logic-heavy prompts.",             "1.1 GB",  3.0, 0, 2, 5, "reasoning",   ["tiny", "reasoning"]),
-    ModelSpec("qwen2.5:1.5b",    "Efficient multilingual. Turkish/English.",            "986 MB",  2.5, 0, 2, 5, "multilingual",["tiny", "multilingual"]),
+    ModelSpec("llama3.2-1b",    "⚡ Ultra-fast 1B. Minimal RAM. Instant responses.",   "1.3 GB",  3.0, 0, 1, 5, "general",     ["tiny", "fast"]),
 
     # Small (4–6 GB RAM)
-    ModelSpec("gemma2:2b",       "Fast — Quick prompt generation, low RAM.",            "1.6 GB",  4.0, 0, 2, 4, "general",     ["small", "balanced"]),
-    ModelSpec("codegemma:2b",    "Code specialist. Tech-aware prompts.",                "1.6 GB",  4.0, 0, 2, 4, "code",        ["small", "code"]),
-    ModelSpec("llama3.2-3b",    "Good speed/quality balance.",                         "2.0 GB",  5.0, 0, 2, 4, "general",     ["small", "balanced"]),
+    ModelSpec("gemma2-2b",      "🔷 Google 2B. Great speed/quality balance.",          "1.6 GB",  4.0, 0, 2, 4, "general",     ["small", "balanced"]),
+    ModelSpec("llama3.2-3b",    "⭐ Best Pick — Fast, sharp, low RAM. Ideal for CPU.", "2.0 GB",  5.0, 0, 3, 4, "general",     ["small", "recommended", "best-value"]),
 
-    # Medium (6–10 GB RAM, recommended mainstream)
-    ModelSpec("gemma2-2b",      "Strong multilingual. Good balance.",                  "1.6 GB",  4.0, 0, 3, 3, "general",     ["medium", "recommended", "best-value"]),
-    ModelSpec("deepseek-r1:7b",  "Advanced reasoning. Complex architectures.",          "4.7 GB",  8.0, 0, 4, 2, "reasoning",   ["medium", "reasoning"]),
-    ModelSpec("llama3.1:8b",     "Powerful 8B. Excellent quality, needs 8GB+ RAM.",     "4.7 GB",  8.0, 0, 4, 2, "general",     ["medium", "quality"]),
-    ModelSpec("mistral",         "Versatile 7B. Reliable quality.",                     "4.1 GB",  7.0, 0, 3, 3, "general",     ["medium", "versatile"]),
-    ModelSpec("codellama:7b",    "Code specialist 7B. Deep understanding.",             "3.8 GB",  7.0, 0, 4, 3, "code",        ["medium", "code"]),
-    ModelSpec("qwen2.5:7b",      "Strong multilingual 7B. Non-English prompts.",        "4.7 GB",  8.0, 0, 4, 2, "multilingual",["medium", "multilingual"]),
-    ModelSpec("gemma2",          "Strong 7B. High quality, moderate speed.",            "5.4 GB",  8.0, 0, 4, 2, "general",     ["medium", "quality"]),
-
-    # Large (12 GB+ RAM / 8 GB+ VRAM)
-    ModelSpec("phi4",            "Best reasoning. Top quality, needs 12GB+ RAM.",       "9.1 GB", 14.0, 8.0, 5, 1, "reasoning",  ["large", "best-quality", "reasoning"]),
+    # Medium (6–10 GB RAM)
+    ModelSpec("phi3.5-mini",    "🧠 Microsoft 3.8B. Excellent structured prompts.",    "2.4 GB",  6.0, 0, 4, 3, "general",     ["medium", "quality"]),
 ]
 
 
@@ -143,7 +133,6 @@ def _detect_cpu() -> tuple[str, int, int]:
     try:
         import psutil
         physical = psutil.cpu_count(logical=False) or logical
-        cpu_freq = psutil.cpu_freq()
     except ImportError:
         pass
 
