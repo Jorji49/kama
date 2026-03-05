@@ -167,6 +167,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  private _lastShownError = "";
+
+  /** Show a setup/system error in the webview (debounced - same error shown only once). */
+  public showError(msg: string): void {
+    if (msg === this._lastShownError) { return; }
+    this._lastShownError = msg;
+    this._post({ command: "err", msg });
+  }
+
   private _chainContext = "";
 
   public prefillInput(text: string): void {

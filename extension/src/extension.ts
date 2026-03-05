@@ -162,10 +162,11 @@ export function activate(context: vscode.ExtensionContext): void {
       // Use the venv Python for all operations
       // PowerShell needs & (call operator) to invoke a quoted path as a command
       const qVenvPython = isWin ? `& "${venvPython}"` : `'${venvPython}'`;
-      // Check ALL critical imports - not just fastapi/llama_cpp.
-      // Missing starlette/pydantic/uvicorn was causing silent startup failures.
-      const depCheck = `${qVenvPython} -c "import fastapi, uvicorn, pydantic, starlette, psutil, dotenv, llama_cpp"`;
+      // Check core imports (llama_cpp excluded — optional, needs C++ compiler)
+      const depCheck = `${qVenvPython} -c "import fastapi, uvicorn, pydantic, starlette, psutil, dotenv"`;
       const pipInstall = `${qVenvPython} -m pip install --prefer-binary -r requirements.txt`;
+      // llama-cpp-python installed separately — if it fails (no C++ compiler), brain still starts
+      const llamaInstall = `${qVenvPython} -m pip install --prefer-binary --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu llama-cpp-python==0.3.2`;
       const startCmd = `${qVenvPython} sslm_engine.py`;
 
       // Version stamp: force reinstall when requirements.txt changes
@@ -187,17 +188,17 @@ export function activate(context: vscode.ExtensionContext): void {
 
       if (isWin) {
         if (needsInstall) {
-          // Force install + stamp update
-          terminal.sendText(`${cdCmd} ; ${pipInstall} ; ${writeStampCmd} ; ${startCmd}`);
+          // Force install core deps + try llama-cpp-python (may fail without C++ compiler) + stamp + start
+          terminal.sendText(`${cdCmd} ; ${pipInstall} ; ${llamaInstall} 2>$null ; ${writeStampCmd} ; ${startCmd}`);
         } else {
           // Quick import check, install only if broken
-          terminal.sendText(`${cdCmd} ; ${depCheck} 2>$null ; if ($LASTEXITCODE -ne 0) { ${pipInstall} ; ${writeStampCmd} } ; ${startCmd}`);
+          terminal.sendText(`${cdCmd} ; ${depCheck} 2>$null ; if ($LASTEXITCODE -ne 0) { ${pipInstall} ; ${llamaInstall} 2>$null ; ${writeStampCmd} } ; ${startCmd}`);
         }
       } else {
         if (needsInstall) {
-          terminal.sendText(`${cdCmd} && ${pipInstall} && ${writeStampCmd} && ${startCmd}`);
+          terminal.sendText(`${cdCmd} && ${pipInstall} && (${llamaInstall} || true) && ${writeStampCmd} && ${startCmd}`);
         } else {
-          terminal.sendText(`${cdCmd} && (${depCheck} 2>/dev/null || (${pipInstall} && ${writeStampCmd})) && ${startCmd}`);
+          terminal.sendText(`${cdCmd} && (${depCheck} 2>/dev/null || (${pipInstall} && (${llamaInstall} || true) && ${writeStampCmd})) && ${startCmd}`);
         }
       }
       terminal.show(true); // Show terminal so user can see startup progress
@@ -283,6 +284,14 @@ export function activate(context: vscode.ExtensionContext): void {
       } else if (h.setup) {
         failCount = 0;
         sidebarProvider.updateBrainStatus(false, true, h.setupPct, h.setupModel);
+      } else if (h.setupError) {
+        // Brain is running but has a setup-level error (e.g. no llama-cpp-python)
+        failCount = 0;
+        clearBrainStarting();
+        sidebarProvider.updateBrainStatus(false);
+        if (h.error) {
+          sidebarProvider.showError(h.error);
+        }
       } else {
         failCount++;
         if (wasOnline && failCount >= MAX_FAILS) {

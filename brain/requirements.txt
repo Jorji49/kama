@@ -3,11 +3,15 @@
 # PINNED: exact versions for reproducible installs across all machines.
 # To update: test new versions locally, then update pins here.
 
---extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
-
 fastapi==0.135.1
 uvicorn[standard]==0.41.0
 pydantic==2.12.5
 python-dotenv==1.2.2
 psutil==6.1.1
-llama-cpp-python==0.3.2
+
+# ── Optional: LLM inference engine ──────────────────────────────────
+# llama-cpp-python requires a C/C++ compiler (Visual Studio Build Tools
+# on Windows, gcc/clang on Linux/macOS). If the build fails, the core
+# Brain still starts — model download/load will fail gracefully.
+# Pre-built wheels: https://abetlen.github.io/llama-cpp-python/whl/cpu
+# Install separately: pip install --prefer-binary --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu llama-cpp-python==0.3.2

@@ -2,6 +2,13 @@
 
 All notable changes to Kama - AI Prompt Optimizer will be documented in this file.
 
+## [3.0.1] - 2026-03-05
+
+### Fixed
+- **llama-cpp-python now optional** — Brain starts without a C/C++ compiler. Core dependencies (fastapi, uvicorn, pydantic) install independently; llama-cpp-python is attempted separately and fails gracefully
+- **First-run install no longer blocked by build failures** — On systems without Visual Studio Build Tools, the Brain server starts normally and reports the missing LLM engine via the health endpoint
+- **Health endpoint reports `no_llama` status** — Extension UI shows a clear error message when llama-cpp-python is not available instead of a generic failure
+
 ## [3.0.0] - 2026-03-05
 
 ### ⚡ Major — Security Hardening & Windows 11 Compatibility

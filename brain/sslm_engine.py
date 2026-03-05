@@ -255,12 +255,14 @@ class PromptResponse(BaseModel):
 @app.get("/health")
 async def health():
     model_id = llm_backend.current_model() or settings.KAMA_MODEL
+    llama_ok = llm_backend._llama_cpp_available()
     s = llm_backend.setup_state()
     if s["active"]:
         return {
             "status": "setup",
             "model": model_id,
             "version": "4.0.0",
+            "llama_available": llama_ok,
             "setup_status": s["status"],
             "setup_pct": s["pct"],
             "setup_model": s["model_id"],
@@ -270,9 +272,22 @@ async def health():
             "status": "setup_error",
             "model": model_id,
             "version": "4.0.0",
+            "llama_available": llama_ok,
             "error": s["error"],
         }
-    return {"status": "ok", "model": model_id, "version": "4.0.0"}
+    if not llama_ok:
+        return {
+            "status": "no_llama",
+            "model": model_id,
+            "version": "4.0.0",
+            "llama_available": False,
+            "error": (
+                "llama-cpp-python not installed. "
+                "A C/C++ compiler is required to build it. "
+                "Install Visual Studio Build Tools, then restart Brain."
+            ),
+        }
+    return {"status": "ok", "model": model_id, "version": "4.0.0", "llama_available": llama_ok}
 
 
 @app.get("/hardware")
@@ -933,7 +948,7 @@ if __name__ == "__main__":
 
     # ── Dependency self-check: fail fast with clear message ──────────
     _missing = []
-    for _mod in ("fastapi", "uvicorn", "pydantic", "starlette", "psutil", "dotenv", "llama_cpp"):
+    for _mod in ("fastapi", "uvicorn", "pydantic", "starlette", "psutil", "dotenv"):
         try:
             __import__(_mod)
         except ImportError:
@@ -942,6 +957,17 @@ if __name__ == "__main__":
         log.error("Missing dependencies: %s", ", ".join(_missing))
         log.error("Run: pip install -r requirements.txt")
         sys.exit(1)
+
+    # llama_cpp is optional — Brain starts without it, model load will fail gracefully
+    try:
+        __import__("llama_cpp")
+    except ImportError:
+        log.warning(
+            "llama-cpp-python not installed — model loading disabled. "
+            "Install: pip install --prefer-binary "
+            "--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu "
+            "llama-cpp-python==0.3.2"
+        )
 
     use_reload = "--reload" in sys.argv
     port = settings.PORT

@@ -152,6 +152,9 @@ export class BrainClient {
       if (res.status === "setup_error") {
         return { ok: false, setup: false, setupPct: 0, setupModel: "", setupError: true, error: res.error ?? "Setup failed" };
       }
+      if (res.status === "no_llama") {
+        return { ok: false, setup: false, setupPct: 0, setupModel: "", setupError: true, error: res.error ?? "llama-cpp-python not installed — C/C++ compiler required." };
+      }
       return { ok: false, setup: false, setupPct: 0, setupModel: "", setupError: false, error: "" };
     };
 

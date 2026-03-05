@@ -220,6 +220,15 @@ def load_model(model_id: str) -> bool:
             return False
 
 
+def _llama_cpp_available() -> bool:
+    """Check if llama-cpp-python is installed."""
+    try:
+        import llama_cpp  # type: ignore[import-not-found]  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def auto_load() -> bool:
     """
     Called at startup - load the first available downloaded model.
@@ -227,6 +236,13 @@ def auto_load() -> bool:
     background thread (non-blocking). Returns True only if a model was
     immediately loaded from disk.
     """
+    if not _llama_cpp_available():
+        log.warning(
+            "llama-cpp-python not installed — model loading disabled. "
+            "Brain will start but cannot run local inference."
+        )
+        return False
+
     mid = any_model_available()
     if mid:
         log.info("Auto-loading model '%s' …", mid)
