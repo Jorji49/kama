@@ -1,177 +1,174 @@
-# Kama - AI Prompt Optimizer
+# Kama — AI Prompt Optimizer
 
-> Transform rough ideas into perfect AI prompts. 100% local, no API keys needed — your data stays private.
+> Turn rough ideas into world-class AI prompts. 100% local. Zero config. Your data never leaves your machine.
 
 ![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/AhmetKayraKama.kama-ai-prompt-optimizer)
 ![License](https://img.shields.io/github/license/Jorji49/kama)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-blue?logo=buymeacoffee&logoColor=white)](https://www.buymeacoffee.com/AhmetKayraKama)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/Jorji49)
 
+---
+
 ## What is Kama?
 
-Kama turns your rough ideas into production-ready AI prompts. Type something like *"create a login page with OAuth"* and get a structured, context-aware prompt optimized for your target AI — all running **100% locally** on your machine.
+Kama is a VS Code extension that transforms your rough ideas into structured, AI-optimized prompts — tailored for Claude, GPT, Gemini, Grok, Codex, and o3.
+
+Type something like *"add OAuth login with Google"* and get a detailed, context-aware prompt that knows your project's tech stack, file structure, and active code.
 
 **No API keys. No cloud. No data leaves your computer.**
 
-## Features
+---
 
-### Core
-- **Vibe-to-Prompt** — Type a rough idea, get a fully structured AI prompt in seconds
-- **100% Local & Private** — Runs entirely on your machine using a local GGUF model (~1.3 GB)
-- **Plug & Play** — One-click install. Brain server + model download automatically on first use
-- **Streaming Output** — Watch prompts being generated token-by-token in real time
-- **Smart Context** — Automatically scans your project structure, languages, and tech stack
-
-### Prompt Tools
-- **Prompt History & Favorites** — Full history with search, star favorites, delete items. Persistent across sessions (up to 100 entries)
-- **Prompt Chains** — Chain prompts together for multi-step workflows. Click the Chain button on any prompt, then your next vibe builds on the previous one
-- **Active File Context** — Kama reads your currently open file and feeds it to the AI for more relevant prompts
-- **Keyboard Shortcut** — `Ctrl+Shift+K` generates a prompt from your current file or selection
-- **Onboarding Tutorial** — 4-slide walkthrough for first-time users
-
-### Agent & Model Support
-- **Multi-IDE Support** — Works with Cursor, Windsurf, Claude Code, GitHub Copilot, and VS Code
-- **Agent Selector** — Pick your target AI (Claude, GPT, Gemini, Grok, Codex, o3) for optimized prompt formatting
-- **Model Management** — Download, switch, and manage local GGUF models from the sidebar
-- **Send to Agent** — One click sends the generated prompt directly to your IDE's AI assistant
-
-### Quality & Security
-- **Quality Scoring** — Every prompt gets a quality grade (A+ to D)
-- **Security Auditing** — Prompts checked for injection risks and sensitive data leaks
-- **Prompt Sanitization** — Dangerous patterns automatically removed
-- **Rate Limiting** — Per-client, in-memory rate limiting on all endpoints
-- **Request Size Limits** — Bodies over 1 MB are rejected to prevent abuse
-
-## Quick Start
+## ⚡ Quick Start
 
 ### Prerequisites
 
-- **Python 3.10+** — [Download](https://www.python.org/downloads/) (check "Add to PATH" during install)
-- **8 GB RAM minimum** (16 GB recommended)
+- **Python 3.10+** — [Download](https://www.python.org/downloads/) (check "Add to PATH")
 
-> **That's it.** No Ollama, no Docker, no external services needed.
+> That's it. No build tools, no Docker, no external services.
 
-### Setup
+### Install
 
 1. Install **Kama** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=AhmetKayraKama.kama-ai-prompt-optimizer)
-2. Open any project folder
-3. Click the **Kama** icon in the Activity Bar (left sidebar)
-4. Kama will automatically:
-   - Start the Brain server in the background
-   - Create a Python virtual environment
-   - Install Python dependencies
-   - Download a local AI model (~1.3 GB, one-time)
-5. Start typing your ideas!
+2. Open a project folder
+3. Click the **Kama** icon in the sidebar
+4. Start typing your ideas
+
+Kama auto-starts the Brain server, installs dependencies, and is ready in seconds.
+
+---
 
 ## How It Works
 
 ```
-Your Idea -> Kama Brain -> Local LLM (GGUF) -> Optimized Prompt -> Your AI Agent
+Your Idea → Security Audit → Context Scan → Prompt Engine → Quality Score → Your AI Agent
 ```
 
 1. **You type** a rough idea in the Kama sidebar
-2. **Security Auditor** checks input for injection/credential leaks
-3. **Context Scanner** analyzes your project (files, structure, tech stack)
-4. **Active File** context from your currently open editor is included
-5. **Local LLM** generates a detailed, AI-optimized prompt (streamed token-by-token)
+2. **Security Auditor** checks for injection risks and credential leaks
+3. **Context Scanner** reads your project structure, languages, and tech stack
+4. **Active File** context from your editor is included automatically
+5. **Prompt Engine** generates a detailed, AI-family-optimized prompt
 6. **Quality Scorer** grades the output (A+ to D)
-7. **Prompt Sanitizer** strips dangerous patterns
-8. **One click** sends the prompt to your AI agent (Cursor, Copilot, Claude, etc.)
+7. **One click** sends it to your AI agent (Cursor, Copilot, Claude, etc.)
+
+---
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Vibe-to-Prompt** | Type a rough idea, get a production-ready prompt |
+| **Agent Selector** | Optimized output for Claude, GPT, Gemini, Grok, Codex, o3 |
+| **Smart Context** | Auto-detects your project's languages, frameworks, and structure |
+| **Active File Awareness** | Reads your currently open file for relevant prompts |
+| **Prompt History** | Search, star, and restore past prompts (100 entries) |
+| **Prompt Chains** | Build multi-step workflows — each vibe extends the previous |
+| **Send to Agent** | One click sends the prompt to your IDE's AI assistant |
+| **Quality Scoring** | Every prompt gets an A+ to D grade |
+| **Security Auditing** | Injection detection, credential leak scanning, sanitization |
+| **Model Management** | Download and switch local GGUF models from the sidebar |
+| **Keyboard Shortcut** | `Ctrl+Shift+K` — prompt from current file or selection |
+| **Multi-IDE Support** | Cursor, Windsurf, Claude Code, GitHub Copilot, VS Code |
+
+---
 
 ## Configuration
 
 | Setting | Default | Description |
 |---------|---------|-------------|
+| `kama.model` | `llama3.2-1b` | Local GGUF model for AI-powered generation |
 | `kama.brainServerUrl` | `http://127.0.0.1:8420` | Brain server URL |
-| `kama.model` | `llama3.2-1b` | Local GGUF model for prompt generation |
-| `kama.maxContextFiles` | `30` | Max project files to scan for context |
-| `kama.autoSendToAgent` | `false` | Auto-send prompt to AI agent after generation |
-| `kama.temperature` | `0.1` | Generation temperature (0.0-1.0) |
+| `kama.maxContextFiles` | `30` | Max project files to scan |
+| `kama.autoSendToAgent` | `false` | Auto-send prompt to agent after generation |
+| `kama.temperature` | `0.1` | Generation temperature (0.0–1.0) |
 | `kama.maxTokens` | `2048` | Max tokens for generated prompts |
 
-## Available Models
+---
 
-| Model | Size | Speed | Quality | Notes |
-|-------|------|-------|---------|-------|
-| **llama3.2-1b** | 1.3 GB | ⚡ Fast | Good | Default, low RAM |
-| **llama3.2-3b** | 2.0 GB | Medium | ⭐ Great | Recommended for quality |
-| **phi3.5-mini** | 2.4 GB | Slower | Excellent | Best reasoning |
-| **gemma2-2b** | 1.6 GB | Medium | Great | Strong multilingual |
+## Local AI Models (Optional)
 
-Models download automatically to `~/.kama/models/` on first use. Switch models from the sidebar.
+Kama works out of the box using template-based prompt generation — no extra downloads needed.
 
-## Commands
+For higher-quality AI-powered generation, install a local GGUF model from the sidebar:
 
-| Command | Shortcut | Description |
-|---------|----------|-------------|
-| `Kama: Send Vibe` | - | Enter a prompt idea via input box |
-| `Kama: Start Brain` | - | Start the local Brain server |
-| `Kama: Send to Agent` | - | Send a prompt to your AI assistant |
-| `Kama: Generate Prompt from Selection` | `Ctrl+Shift+K` | Generate prompt from current file/selection |
+| Model | Size | Speed | Quality |
+|-------|------|-------|---------|
+| **llama3.2-1b** | 1.3 GB | ⚡ Fast | Good |
+| **llama3.2-3b** | 2.0 GB | Medium | ⭐ Great |
+| **phi3.5-mini** | 2.4 GB | Slower | Excellent |
+| **gemma2-2b** | 1.6 GB | Medium | Great |
+
+> Models download to `~/.kama/models/`. A C/C++ compiler is required for local model inference (Visual Studio Build Tools on Windows, gcc/clang on Linux/macOS).
+
+---
 
 ## Privacy & Security
 
-- **Zero cloud dependency** — All processing happens locally
+- **Zero cloud dependency** — All processing runs locally on your machine
 - **No telemetry** — We don't collect any usage data
-- **No API keys** — Works entirely with a bundled local model
-- **Your code stays yours** — Context scanning never leaves your machine
-- **Models stored locally** — In `~/.kama/models/`, you own everything
-- **CORS restricted** — Brain API only accepts requests from localhost
+- **No API keys** — Everything works offline
+- **CORS restricted** — Brain API only accepts localhost requests
 - **Input sanitization** — Injection and credential leak detection on every request
-- **Download verification** — Model files are SHA-256 verified after download
+- **SHA-256 verification** — Downloaded models are integrity-checked
+- **Rate limiting** — Per-client limits on all endpoints
+- **Body size limits** — Requests over 1 MB are rejected
+
+---
 
 ## Architecture
 
 ```
 kama/
-├── brain/                        # Python backend (bundled with VSIX)
-│   ├── sslm_engine.py            # FastAPI server + endpoints
-│   ├── llm_backend.py            # Local GGUF model management
+├── brain/                        # Python backend (FastAPI)
+│   ├── sslm_engine.py            # Server + endpoints
+│   ├── llm_backend.py            # GGUF model management
 │   ├── prompt_optimizer.py       # AI-specific prompt builder
 │   ├── prompt_knowledge_base.py  # Community prompt patterns
 │   ├── context_scanner.py        # Project analysis
 │   ├── security_auditor.py       # Security gate
 │   ├── hardware_profiler.py      # Hardware-aware model recommendations
-│   └── config.py                 # Environment-driven configuration
+│   └── config.py                 # Environment configuration
 └── extension/                    # VS Code extension (TypeScript)
     └── src/
-        ├── extension.ts               # Entry point + auto-start + IDE detection
-        ├── providers/SidebarProvider.ts # Webview UI + streaming + history
+        ├── extension.ts               # Entry point + auto-start
+        ├── providers/SidebarProvider.ts # Webview UI + streaming
         ├── services/BrainClient.ts     # HTTP/SSE client
         └── utils/config.ts            # Settings
 ```
 
+---
+
 ## Troubleshooting
 
-### Brain server won't start
-- Make sure Python 3.10+ is installed: `python --version`
-- Check if port 8420 is available
-- Try restarting VS Code
-- Check the **"Kama Brain"** terminal in VS Code for errors
+| Problem | Solution |
+|---------|----------|
+| Brain won't start | Verify Python 3.10+: `python --version`. Check the "Kama Brain" terminal for errors. |
+| Shows "Offline" | Wait 10–15 seconds on first launch. Click "Start Brain Server" if needed. |
+| Model download stuck | Check internet connection. Delete `~/.kama/models/` to retry. |
+| Port conflict | Brain auto-finds an alternate port if 8420 is busy. |
 
-### Model download stuck
-- Check your internet connection (models download from HuggingFace)
-- Models are cached in `~/.kama/models/` — delete the folder to re-download
-
-### Extension shows "Offline"
-- The Brain auto-starts on activation. Wait 10-15 seconds for first-time setup
-- Click **"Start Brain Server"** in the offline banner
+---
 
 ## Contributing
 
 1. Fork the repo
-2. Clone your fork and open the `extension/` folder in VS Code
+2. `git clone` and open `extension/` in VS Code
 3. `npm install` in the `extension/` directory
 4. Press `F5` to launch Extension Development Host
-5. Make changes and submit a PR
+5. Submit a PR
+
+---
 
 ## Support
 
-If you find Kama useful, consider supporting the project:
+If Kama saves you time, consider supporting the project:
 
 <a href="https://www.buymeacoffee.com/AhmetKayraKama" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" height="40"></a>
 
 [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/Jorji49)
+
+---
 
 ## License
 

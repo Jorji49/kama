@@ -2,7 +2,7 @@
   "name": "kama-ai-prompt-optimizer",
   "displayName": "Kama - AI Prompt Optimizer",
   "description": "Transform rough ideas into perfect AI prompts. 100% local, no API keys needed. Your data stays private.",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "publisher": "AhmetKayraKama",
   "icon": "media/kama-icon.png",
   "repository": {
@@ -55,7 +55,8 @@
         {
           "type": "webview",
           "id": "kama.vibePanel",
-          "name": "Kama"
+          "name": "Kama",
+          "icon": "media/kama-icon.svg"
         }
       ]
     },
