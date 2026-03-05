@@ -277,15 +277,10 @@ async def health():
         }
     if not llama_ok:
         return {
-            "status": "no_llama",
-            "model": model_id,
+            "status": "ok",
+            "model": "template",
             "version": "4.0.0",
             "llama_available": False,
-            "error": (
-                "llama-cpp-python not installed. "
-                "A C/C++ compiler is required to build it. "
-                "Install Visual Studio Build Tools, then restart Brain."
-            ),
         }
     return {"status": "ok", "model": model_id, "version": "4.0.0", "llama_available": llama_ok}
 

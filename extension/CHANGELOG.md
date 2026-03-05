@@ -2,6 +2,12 @@
 
 All notable changes to Kama - AI Prompt Optimizer will be documented in this file.
 
+## [3.0.3] - 2026-03-05
+
+### Changed
+- **Template mode is now the default "Connected" experience** — Brain server reports "Connected" even without llama-cpp-python. Template-based prompt generation works out of the box with zero extra dependencies. True plug-and-play — no C++ compiler needed
+- **llama-cpp-python fully optional** — If installed, enables LLM-based token-by-token generation for higher quality. If not, Kama works seamlessly with template prompts
+
 ## [3.0.2] - 2026-03-05
 
 ### Fixed
