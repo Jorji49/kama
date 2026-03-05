@@ -2,6 +2,14 @@
 
 All notable changes to Kama — AI Prompt Optimizer.
 
+## [3.0.6] - 2026-03-05
+
+### Fixed
+- **Major Prompt Engine Bug**: Fixed an issue where the local LLM would copy example prompts directly from its system instructions (e.g., "Validate all user inputs, return consistent error responses...").
+- **False Pattern Matching**: Fixed a bug where generic requests (like "html project") would incorrectly match the "ESP32 UI Library Development" pattern in the knowledge base.
+
+---
+
 ## [3.0.5] - 2026-03-05
 
 ### Fixed
