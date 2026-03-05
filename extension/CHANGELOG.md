@@ -2,6 +2,13 @@
 
 All notable changes to Kama - AI Prompt Optimizer will be documented in this file.
 
+## [3.0.2] - 2026-03-05
+
+### Fixed
+- **"Offline" shown when Brain is running without llama-cpp-python** — Extension now correctly shows "Limited" status with blue dot and an informative "Running in Template Mode" banner instead of "Brain Server Offline". The `degraded` flag was sent to the webview but never handled in the UI
+- **Start Brain button hidden in degraded mode** — Brain IS running in this state, so the start button is hidden. Restored when Brain actually goes offline
+- **Chat history restore broken** — Syntax error in webview JS (`m.h')` → `m.h)`) prevented session restore from working
+
 ## [3.0.1] - 2026-03-05
 
 ### Fixed

@@ -288,7 +288,7 @@ export function activate(context: vscode.ExtensionContext): void {
         // Brain is running but has a setup-level error (e.g. no llama-cpp-python)
         failCount = 0;
         clearBrainStarting();
-        sidebarProvider.updateBrainStatus(false);
+        sidebarProvider.updateBrainStatus(false, false, 0, '', true); // degraded mode
         if (h.error) {
           sidebarProvider.showError(h.error);
         }

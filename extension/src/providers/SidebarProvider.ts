@@ -154,8 +154,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  public updateBrainStatus(online: boolean, starting: boolean = false, setupPct: number = 0, setupModel: string = ""): void {
-    this._post({ command: "status", online, starting, setupPct, setupModel });
+  public updateBrainStatus(online: boolean, starting: boolean = false, setupPct: number = 0, setupModel: string = "", degraded: boolean = false): void {
+    this._post({ command: "status", online, starting, setupPct, setupModel, degraded });
     // When brain transitions from offline → online, auto-refresh model catalog and context (once)
     if (online && !this._wasOnline) {
       this._wasOnline = true;
@@ -388,8 +388,8 @@ body{font-family:var(--f);background:var(--bg);color:var(--t);display:flex;flex-
 .ag-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 
 .ag-i{padding:7px 14px 7px 22px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .1s}
-.ag-i:hover{background:var(--s2)}
-.ag-i.sel{background:var(--s2)}
+.ag-i:hover{background:var(--s2);color:var(--t)}
+.ag-i.sel{background:var(--s2);color:var(--t)}
 .ag-i-n{flex:1;font-size:11.5px;font-weight:500;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ag-i-d{font-size:9px;color:var(--t4);flex-shrink:0;max-width:90px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ag-i-ck{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s}
@@ -1129,6 +1129,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
         var btn=$('bStartBrain');
         btn.classList.remove('starting');
         btn.disabled=false;
+        btn.style.display='';
         $('bStartTxt').textContent='Start Brain Server';
       } else if(m.starting){
         // Downloading / starting
@@ -1152,6 +1153,16 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
         $('bStartBrain').classList.add('starting');
         $('bStartBrain').disabled=true;
         $('bStartTxt').textContent='Starting…';
+      } else if(m.degraded){
+        // Brain is running but llama-cpp-python missing — template mode
+        D.className='dot';D.style.background='var(--blue)';
+        SL.textContent='Limited';
+        OB.classList.add('show');
+        $('OB_TITLE').textContent='Running in Template Mode';
+        $('OB_DESC').innerHTML='llama-cpp-python is not installed.<br/>Kama is using template-based prompt generation.<br/><br/><b>To enable AI generation:</b> Install Visual Studio Build Tools, then restart Brain.';
+        $('OB_PROG').style.display='none';
+        $('bStartBrain').style.display='none';
+        brainStarting=false;
       } else {
         D.className='dot off';
         SL.textContent='Offline';
@@ -1164,6 +1175,7 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
         var btn2=$('bStartBrain');
         btn2.classList.remove('starting');
         btn2.disabled=false;
+        btn2.style.display='';
         $('bStartTxt').textContent='Start Brain Server';
       }
     }
