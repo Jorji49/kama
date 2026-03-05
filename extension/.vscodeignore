@@ -2,6 +2,7 @@
 .vscode-test/**
 src/**
 .gitignore
+.git/**
 tsconfig.json
 **/*.map
 **/*.ts
@@ -10,6 +11,10 @@ node_modules/**
 *.vsix
 __temp*.js
 brain/__pycache__/**
+brain/.venv/**
+brain/.env
+brain/.env.*
+brain/.pytest_cache/**
 brain/tests/**
 **/*.pyc
 .eslintrc*

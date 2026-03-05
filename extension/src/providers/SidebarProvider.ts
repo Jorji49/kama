@@ -5,6 +5,7 @@
  */
 
 import * as vscode from "vscode";
+import * as crypto from "crypto";
 import { BrainClient, PromptResponse, HardwareProfileResponse, ContextResponse } from "../services/BrainClient";
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
@@ -325,7 +326,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   private static readonly LLAMA = `<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M35 85V55C35 40 40 30 50 25C60 30 65 40 65 55V85" stroke="currentColor" stroke-width="3" fill="none"/><path d="M39 35V15C39 10 42 8 44 12L43 30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M61 35V15C61 10 58 8 56 12L57 30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="43" cy="45" r="3.5" fill="currentColor"/><circle cx="57" cy="45" r="3.5" fill="currentColor"/><ellipse cx="50" cy="58" rx="5" ry="3.5" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="48" cy="57" r="1" fill="currentColor"/><circle cx="52" cy="57" r="1" fill="currentColor"/><path d="M47 63Q50 66 53 63" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>`;
 
   private _html(wv: vscode.Webview): string {
-    const n = Array.from({ length: 32 }, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.random() * 36 | 0]).join("");
+    const n = crypto.randomBytes(24).toString('base64url');
     const L = SidebarProvider.LLAMA;
     const L20 = L.replace('viewBox=', 'style="width:20px;height:20px" viewBox=');
     const L40 = L.replace('viewBox=', 'style="width:40px;height:40px" viewBox=');
@@ -336,8 +337,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${wv.cspSource}; style-src ${wv.cspSource} 'unsafe-inline'; script-src 'nonce-${n}';">
-<style>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${wv.cspSource}; style-src ${wv.cspSource} 'nonce-${n}'; script-src 'nonce-${n}';">
+<style nonce="${n}">
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#000;--s1:#0a0a0a;--s2:#111;--s3:#1a1a1a;--border:#1a1a1a;--border2:#2a2a2a;--t:#fff;--t2:#b0b0b0;--t3:#666;--t4:#444;--ok:#22c55e;--err:#ef4444;--blue:#3b82f6;--r:10px;--f:-apple-system,'Segoe UI',system-ui,sans-serif;--m:'SF Mono','Cascadia Code','Fira Code',Consolas,monospace}
 html,body{height:100%;overflow:hidden}

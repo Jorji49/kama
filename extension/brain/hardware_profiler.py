@@ -103,14 +103,30 @@ def _detect_ram_gb() -> float:
     sys = platform.system()
     try:
         if sys == "Windows":
-            out = subprocess.check_output(
-                ["wmic", "computersystem", "get", "TotalPhysicalMemory"],
-                text=True, timeout=5
-            )
-            for line in out.splitlines():
-                line = line.strip()
-                if line.isdigit():
-                    return round(int(line) / (1024 ** 3), 1)
+            # Prefer PowerShell Get-CimInstance (wmic is deprecated/removed on Win11)
+            try:
+                out = subprocess.check_output(
+                    ["powershell", "-NoProfile", "-Command",
+                     "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"],
+                    text=True, timeout=8, stderr=subprocess.DEVNULL
+                )
+                val = out.strip()
+                if val.isdigit():
+                    return round(int(val) / (1024 ** 3), 1)
+            except Exception:
+                pass
+            # Last resort: wmic (may not exist on newer Windows)
+            try:
+                out = subprocess.check_output(
+                    ["wmic", "computersystem", "get", "TotalPhysicalMemory"],
+                    text=True, timeout=5, stderr=subprocess.DEVNULL
+                )
+                for line in out.splitlines():
+                    line = line.strip()
+                    if line.isdigit():
+                        return round(int(line) / (1024 ** 3), 1)
+            except Exception:
+                pass
         elif sys == "Linux":
             with open("/proc/meminfo") as f:
                 for line in f:
@@ -142,12 +158,21 @@ def _detect_cpu() -> tuple[str, int, int]:
         sys = platform.system()
         try:
             if sys == "Windows":
-                out = subprocess.check_output(
-                    ["wmic", "cpu", "get", "Name"],
-                    text=True, timeout=5
-                )
-                lines = [l.strip() for l in out.splitlines() if l.strip() and l.strip() != "Name"]
-                name = lines[0] if lines else "Unknown CPU"
+                # Prefer PowerShell Get-CimInstance over deprecated wmic
+                try:
+                    out = subprocess.check_output(
+                        ["powershell", "-NoProfile", "-Command",
+                         "(Get-CimInstance Win32_Processor).Name"],
+                        text=True, timeout=8, stderr=subprocess.DEVNULL
+                    )
+                    name = out.strip() or "Unknown CPU"
+                except Exception:
+                    out = subprocess.check_output(
+                        ["wmic", "cpu", "get", "Name"],
+                        text=True, timeout=5, stderr=subprocess.DEVNULL
+                    )
+                    lines = [l.strip() for l in out.splitlines() if l.strip() and l.strip() != "Name"]
+                    name = lines[0] if lines else "Unknown CPU"
             elif sys == "Linux":
                 with open("/proc/cpuinfo") as f:
                     for line in f:
@@ -202,22 +227,43 @@ def _detect_gpu() -> tuple[str, float, bool, bool]:
         except (FileNotFoundError, subprocess.SubprocessError, ValueError) as e:
             log.debug("nvidia-smi error: %s", e)
 
-    # ── AMD on Windows via WMIC ───────────────────────────────────────
+    # ── GPU on Windows via PowerShell (preferred) or WMIC (fallback) ──
     if not has_cuda and not has_metal and sys == "Windows":
         try:
             out = subprocess.check_output(
-                ["wmic", "path", "win32_VideoController", "get",
-                 "Name,AdapterRAM", "/value"],
-                text=True, timeout=8
+                ["powershell", "-NoProfile", "-Command",
+                 "Get-CimInstance Win32_VideoController | Select-Object -First 1 -ExpandProperty Name"],
+                text=True, timeout=8, stderr=subprocess.DEVNULL
             )
-            name_m = re.search(r"Name=(.+)", out)
-            ram_m = re.search(r"AdapterRAM=(\d+)", out)
-            if name_m:
-                gpu_name = name_m.group(1).strip()[:60]
-            if ram_m:
-                vram_gb = round(int(ram_m.group(1)) / (1024 ** 3), 1)
-        except Exception as e:
-            log.debug("WMIC GPU detection error: %s", e)
+            gpu_name = out.strip()[:60] or "Unknown GPU"
+            # Try to get VRAM
+            try:
+                vram_out = subprocess.check_output(
+                    ["powershell", "-NoProfile", "-Command",
+                     "Get-CimInstance Win32_VideoController | Select-Object -First 1 -ExpandProperty AdapterRAM"],
+                    text=True, timeout=8, stderr=subprocess.DEVNULL
+                )
+                val = vram_out.strip()
+                if val.isdigit():
+                    vram_gb = round(int(val) / (1024 ** 3), 1)
+            except Exception:
+                pass
+        except Exception:
+            # Last resort: deprecated wmic
+            try:
+                out = subprocess.check_output(
+                    ["wmic", "path", "win32_VideoController", "get",
+                     "Name,AdapterRAM", "/value"],
+                    text=True, timeout=8, stderr=subprocess.DEVNULL
+                )
+                name_m = re.search(r"Name=(.+)", out)
+                ram_m = re.search(r"AdapterRAM=(\d+)", out)
+                if name_m:
+                    gpu_name = name_m.group(1).strip()[:60]
+                if ram_m:
+                    vram_gb = round(int(ram_m.group(1)) / (1024 ** 3), 1)
+            except Exception as e:
+                log.debug("GPU detection error: %s", e)
 
     # ── AMD on Linux via lspci ────────────────────────────────────────
     if not has_cuda and not has_metal and sys == "Linux":

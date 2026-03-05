@@ -8,6 +8,7 @@ __pycache__/
 *.py[cod]
 venv/
 .venv/
+brain/.venv/
 .env
 .env.local
 *.egg-info/
@@ -15,6 +16,7 @@ venv/
 .mypy_cache/
 .coverage
 htmlcov/
+*.gguf
 
 # VS Code
 .vscode/settings.json

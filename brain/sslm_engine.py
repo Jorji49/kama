@@ -79,6 +79,19 @@ app.add_middleware(
 )
 
 
+# ── Security: Request body size limit (1 MB) ──
+_MAX_BODY_BYTES = 1_048_576  # 1 MB
+
+
+@app.middleware("http")
+async def _limit_body_size(request: Request, call_next):
+    """Reject requests with bodies larger than _MAX_BODY_BYTES."""
+    cl = request.headers.get("content-length")
+    if cl and int(cl) > _MAX_BODY_BYTES:
+        return JSONResponse(status_code=413, content={"detail": "Request body too large"})
+    return await call_next(request)
+
+
 # ── Security: Rate limiting (per-client, in-memory) ──
 
 _rate_limits: dict[str, list[float]] = defaultdict(list)
@@ -181,6 +194,12 @@ def _safe_workspace(raw: str) -> str:
     if not raw:
         return ""
     from pathlib import Path
+    # Block UNC paths and Windows extended-length prefix
+    stripped = raw.strip()
+    if stripped.startswith("\\\\?\\") or stripped.startswith("\\\\.\\"):
+        return ""
+    if stripped.startswith("\\\\") and not stripped[2:].startswith("?"):
+        return ""  # UNC network paths
     try:
         p = Path(raw).resolve()
     except Exception:
@@ -188,11 +207,13 @@ def _safe_workspace(raw: str) -> str:
     # Must be a real directory
     if not p.is_dir():
         return ""
-    # Block absolute system paths (Linux /etc, /proc; Windows C:\Windows)
-    blocked = {"/etc", "/proc", "/sys", "/dev", "/root",
-               "C:\\Windows", "C:\\System32", "C:\\Program Files"}
+    # Block absolute system paths — case-insensitive on Windows
+    blocked = {"/etc", "/proc", "/sys", "/dev", "/root", "/var",
+               "c:\\windows", "c:\\system32", "c:\\program files",
+               "c:\\program files (x86)", "c:\\programdata"}
     s = str(p)
-    if any(s.startswith(b) for b in blocked):
+    s_cmp = s.lower() if os.name == "nt" else s
+    if any(s_cmp.startswith(b) for b in blocked):
         return ""
     # Block paths containing null bytes or shell metacharacters
     if any(c in s for c in ('\x00', '&', ';', '|', '`', '$', '(', ')')):
@@ -292,7 +313,7 @@ async def hardware_profile(request: Request):
         }
     except Exception as e:
         log.error("Hardware profile error: %s", e)
-        return JSONResponse(status_code=500, content={"detail": str(e)})
+        return JSONResponse(status_code=500, content={"detail": "Hardware detection failed"})
 
 
 @app.get("/agents")
@@ -325,8 +346,10 @@ async def scan_context_endpoint(req: ContextRequest, request: Request):
 
 
 @app.get("/knowledge-base")
-async def knowledge_base():
+async def knowledge_base(request: Request):
     """Expose analyzed prompt patterns from prompts.chat community."""
+    if not _check_rate(_client_key(request, "kb"), _RATE_MAX_GENERAL):
+        return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
     return {
         "total_patterns": len(PROMPT_PATTERNS),
         "categories": list(CATEGORY_ENHANCEMENTS.keys()),
@@ -344,8 +367,10 @@ async def knowledge_base():
 
 
 @app.get("/knowledge-base/{category}")
-async def knowledge_base_category(category: str):
+async def knowledge_base_category(category: str, request: Request):
     """Get patterns and enhancement rules for a specific category."""
+    if not _check_rate(_client_key(request, "kb"), _RATE_MAX_GENERAL):
+        return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
     patterns = [p for p in PROMPT_PATTERNS if p.category == category or category in p.tags]
     enhancements = CATEGORY_ENHANCEMENTS.get(category, {})
     return {
@@ -544,7 +569,7 @@ async def vibe_stream(req: VibeRequest, request: Request):
     ctx_hint = ""
     safe_ws = _safe_workspace(req.workspace_path)
     if safe_ws:
-        ctx = scan_workspace(safe_ws)
+        ctx = await asyncio.to_thread(scan_workspace, safe_ws)
         ctx_hint = _ctx(ctx)
 
     async def _stream_gen():
@@ -685,7 +710,7 @@ async def vibe(req: VibeRequest, request: Request) -> PromptResponse:
     ctx_hint = ""
     safe_ws = _safe_workspace(req.workspace_path)
     if safe_ws:
-        ctx = scan_workspace(safe_ws)
+        ctx = await asyncio.to_thread(scan_workspace, safe_ws)
         ctx_hint = _ctx(ctx)
     elif req.workspace_path:
         log.warning("[%s] Rejected workspace path: %s", request_id, req.workspace_path[:100])
@@ -899,26 +924,63 @@ if __name__ == "__main__":
     import socket
     import uvicorn
 
+    # ── Windows: use SelectorEventLoop for reliable signal handling ──
+    # ProactorEventLoop (default on Windows) doesn't support
+    # add_signal_handler(), which can cause uvicorn to miss shutdown
+    # signals or exit immediately after startup.
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    # ── Dependency self-check: fail fast with clear message ──────────
+    _missing = []
+    for _mod in ("fastapi", "uvicorn", "pydantic", "starlette", "psutil", "dotenv", "llama_cpp"):
+        try:
+            __import__(_mod)
+        except ImportError:
+            _missing.append(_mod)
+    if _missing:
+        log.error("Missing dependencies: %s", ", ".join(_missing))
+        log.error("Run: pip install -r requirements.txt")
+        sys.exit(1)
+
     use_reload = "--reload" in sys.argv
     port = settings.PORT
 
     # Try to kill whatever holds the port, then try binding
     def _port_free(p: int) -> bool:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        """Check if a port is free by trying to BIND to it.
+
+        On Windows, socket.close() after a failed connect() can hang
+        indefinitely. Using bind() avoids that entirely.
+        We do NOT set SO_REUSEADDR so bind correctly fails if something
+        is already listening on the port.
+        """
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.bind((settings.HOST, p))
+            return True    # bind succeeded → port is free
+        except OSError:
+            return False   # bind failed → port is busy
+        finally:
             try:
-                s.bind((settings.HOST, p))
-                return True
+                s.close()
             except OSError:
-                return False
+                pass
 
     if not _port_free(port):
-        # Try to gracefully shut down the old server
+        # Try to gracefully shut down the old server by hitting its health endpoint
+        log.info("Port %d busy — attempting to reach existing brain…", port)
         try:
             import urllib.request
-            urllib.request.urlopen(f"http://{settings.HOST}:{port}/health", timeout=1)
+            urllib.request.urlopen(f"http://{settings.HOST}:{port}/health", timeout=2)
         except Exception:
             pass
+        # Wait for the old process to release the port (Windows needs extra time)
+        import time as _time
+        for _ in range(20):            # up to 10 s
+            _time.sleep(0.5)
+            if _port_free(port):
+                break
         # If still occupied, try alternate port
         if not _port_free(port):
             for alt in range(port + 1, port + 10):
@@ -929,12 +991,18 @@ if __name__ == "__main__":
 
     log.info("Brain v4.0 | %s | :%d | reload=%s", settings.KAMA_MODEL, port, use_reload)
     try:
+        # When reload is disabled, pass the app object directly.
+        # This avoids re-importing the module and ensures the
+        # WindowsSelectorEventLoopPolicy is respected on Windows.
+        # String import format is only needed for --reload mode.
+        app_target = "sslm_engine:app" if use_reload else app
         uvicorn.run(
-            "sslm_engine:app",
+            app_target,
             host=settings.HOST,
             port=port,
             reload=use_reload,
             timeout_keep_alive=30,
+            loop="asyncio",
         )
     except (KeyboardInterrupt, asyncio.CancelledError):
         pass

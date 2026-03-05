@@ -26,25 +26,37 @@ class Settings:
     All other fields should be treated as read-only after initialization.
     """
 
+    def _int(key: str, default: int) -> int:
+        try:
+            return int(os.getenv(key, str(default)))
+        except (ValueError, TypeError):
+            return default
+
+    def _float(key: str, default: float) -> float:
+        try:
+            return float(os.getenv(key, str(default)))
+        except (ValueError, TypeError):
+            return default
+
     # ── Kama LLM (llama-cpp-python, GGUF) ───────────────────────────────────
     # Model id from llm_backend.GGUF_CATALOG (e.g. "llama3.2-3b", "phi3.5-mini")
     KAMA_MODEL: str = os.getenv("KAMA_MODEL", "llama3.2-1b")
 
     # Max tokens for generated prompts.
     # 2048 = good balance for most tasks. Increase for complex architecture prompts.
-    KAMA_MAX_TOKENS: int = int(os.getenv("KAMA_MAX_TOKENS", "2048"))
+    KAMA_MAX_TOKENS: int = _int("KAMA_MAX_TOKENS", 2048)
 
     # Temperature (0.0-1.0). Lower = focused/consistent, Higher = creative/varied.
     # 0.1 is ideal for structured coding prompts.
-    KAMA_TEMPERATURE: float = float(os.getenv("KAMA_TEMPERATURE", "0.1"))
+    KAMA_TEMPERATURE: float = _float("KAMA_TEMPERATURE", 0.1)
 
     # ── Server ───────────────────────────────────────────────────────
     HOST: str = os.getenv("BRAIN_HOST", "127.0.0.1")
-    PORT: int = int(os.getenv("BRAIN_PORT", "8420"))
+    PORT: int = _int("BRAIN_PORT", 8420)
 
     # ── Context Scanner ──────────────────────────────────────────────
-    MAX_CONTEXT_FILES: int = int(os.getenv("MAX_CONTEXT_FILES", "30"))
-    MAX_FILE_SIZE_KB: int = int(os.getenv("MAX_FILE_SIZE_KB", "32"))
+    MAX_CONTEXT_FILES: int = _int("MAX_CONTEXT_FILES", 30)
+    MAX_FILE_SIZE_KB: int = _int("MAX_FILE_SIZE_KB", 32)
 
     # Directories / patterns to always skip during workspace scanning
     IGNORED_DIRS: frozenset[str] = frozenset({

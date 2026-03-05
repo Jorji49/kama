@@ -2,6 +2,49 @@
 
 All notable changes to Kama - AI Prompt Optimizer will be documented in this file.
 
+## [3.0.0] - 2026-03-05
+
+### ⚡ Major — Security Hardening & Windows 11 Compatibility
+
+A comprehensive security, stability, and platform compatibility overhaul. No breaking user-facing changes — all improvements are under the hood.
+
+### Added
+- **SHA-256 download verification** — Model files are checksummed after download and rejected if integrity check fails
+- **Request body size limits** — Bodies over 1 MB rejected (HTTP 413) to prevent abuse
+- **Rate limiting on knowledge-base endpoints** — `/knowledge-base` and `/knowledge-base/{category}` now rate-limited
+- **Trusted domain validation** — Model downloads only allowed from `huggingface.co` (HTTPS)
+- **UNC/extended path blocking** — `\\?\`, `\\.\ `, and `\\server\share` paths rejected in workspace scanner
+- **Dependency self-check** — Brain fails fast with clear error message if any Python dependency is missing
+- **Python venv isolation** — Brain runs inside a `.venv` virtual environment (auto-created on first launch)
+- **Deps stamp versioning** — `requirements.txt` changes trigger automatic reinstall on next launch
+- **Activation error boundary** — Extension activation wrapped in try/catch so failures show user-friendly error
+- **Brain terminal cleanup on deactivate** — Python process killed when extension closes
+- **Contributing guide** — Added to README
+
+### Changed
+- **Windows hardware detection** — Migrated from deprecated `wmic` to PowerShell `Get-CimInstance` (WMIC removed in Windows 11 24H2), with WMIC as automatic fallback
+- **Windows event loop** — Forced `WindowsSelectorEventLoop` to fix uvicorn signal handling on Windows (ProactorEventLoop doesn't support `add_signal_handler`)
+- **Port check rewrite** — Uses `bind()` instead of `connect()` to avoid Windows socket hang; waits up to 10s for old process to release port
+- **SSRF prevention** — `BrainClient` constructor validates URL is `http://127.0.0.1` or `http://localhost` only
+- **CSP hardened** — Replaced `'unsafe-inline'` for styles with `nonce`-based CSP; nonce now uses `crypto.randomBytes` instead of `Math.random`
+- **XML injection prevention** — Context scanner escapes HTML entities in attribute values and CDATA sections
+- **Thread-safe model state** — `_setup` dict protected by `_setup_lock`; inference uses atomic reference copy of `_llm`
+- **Hardened error responses** — Hardware profile errors no longer leak exception details to client
+- **Blocked system paths expanded** — Added `/var`, `C:\Program Files (x86)`, `C:\ProgramData`; case-insensitive matching on Windows
+- **Config parsing** — `int()`/`float()` env var parsing wrapped in try/except to prevent crash on invalid values
+- **Pinned Python dependencies** — Exact version pins for reproducible installs (`fastapi==0.135.1`, `uvicorn==0.41.0`, etc.)
+- **llama-cpp-python bundled** — Now included in `requirements.txt` with CPU wheel index
+- **Context scanning async** — `scan_workspace()` offloaded to thread pool via `asyncio.to_thread()` so it doesn't block the event loop
+- **Auto-start threshold** — Uses `MAX_FAILS` constant instead of hardcoded `1`
+- **IDE detection cached** — `detectIDE()` result cached to avoid repeated command probing
+- **Import check expanded** — Dependency check now verifies all 7 critical imports, not just 2
+- **All terminal kills** — Disposes ALL "Kama Brain" terminals on restart, not just the first one
+- **Cross-platform file rename** — `tmp.rename()` → `tmp.replace()` (rename fails on Windows if destination exists)
+- **README polish** — Added Rate Limiting and Request Size Limits to features; added Security & Privacy section; added Contributing guide; dash → em dash formatting throughout
+
+### Removed
+- **Unused `asyncio` import** — Removed from `security_auditor.py`
+
 ## [2.1.3] - 2026-03-04
 
 ### Fixed

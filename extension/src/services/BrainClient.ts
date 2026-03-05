@@ -112,7 +112,21 @@ export class BrainClient {
   private static readonly HEALTH_TIMEOUT_MS = 2_000;
 
   constructor(baseUrl: string) {
-    this._baseUrl = baseUrl.replace(/\/+$/, "");
+    // Validate URL: only allow http to localhost/127.0.0.1 to prevent SSRF
+    const cleaned = baseUrl.replace(/\/+$/, "");
+    try {
+      const u = new URL(cleaned);
+      const host = u.hostname.toLowerCase();
+      if (u.protocol !== "http:" || (host !== "127.0.0.1" && host !== "localhost")) {
+        throw new Error(`Kama Brain URL must be http://127.0.0.1 or http://localhost, got: ${cleaned}`);
+      }
+    } catch (e) {
+      if (e instanceof TypeError) {
+        throw new Error(`Invalid Brain URL: ${cleaned}`);
+      }
+      throw e;
+    }
+    this._baseUrl = cleaned;
   }
 
   /**

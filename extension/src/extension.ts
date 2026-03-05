@@ -13,10 +13,14 @@ import { SidebarProvider } from "./providers/SidebarProvider";
 import { BrainClient } from "./services/BrainClient";
 import { KamaConfig } from "./utils/config";
 
+// Cached IDE detection result (expensive to compute each time)
+let _cachedIDE: "cursor" | "windsurf" | "claude-code" | "copilot" | "vscode" | null = null;
+
 let brainClient: BrainClient;
 let _healthInterval: ReturnType<typeof setInterval> | null = null;
 
 export function activate(context: vscode.ExtensionContext): void {
+  try {
   brainClient = new BrainClient(KamaConfig.brainServerUrl);
   const sidebarProvider = new SidebarProvider(context.extensionUri, brainClient, context);
 
@@ -92,7 +96,8 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!brainPath) { return; }
 
       // ── Python check ──────────────────────────────────────────────
-      const pythonCmd = process.platform === "win32" ? "python" : "python3";
+      const isWin = process.platform === "win32";
+      const pythonCmd = isWin ? "python" : "python3";
       try {
         cp.execSync(`${pythonCmd} --version`, { timeout: 5000, stdio: "pipe" });
       } catch {
@@ -113,26 +118,87 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      // Kill existing Kama Brain terminal to avoid stale sessions / port conflicts
-      const existing = vscode.window.terminals.find(t => t.name === "Kama Brain");
-      if (existing) { existing.dispose(); }
-      // Small delay to let the old terminal fully close before creating a new one
-      await new Promise(r => setTimeout(r, 500));
-      const terminal = vscode.window.createTerminal({ name: "Kama Brain" });
+      // Sanitize brainPath: reject shell metacharacters to prevent command injection
+      if (/[;&|`$(){}\[\]!#~<>*?\r\n]/.test(brainPath)) {
+        vscode.window.showErrorMessage("Kama: Brain folder path contains invalid characters.");
+        return;
+      }
 
-      const isWin = process.platform === "win32";
-      const sep = isWin ? " ; " : " && ";
+      // Kill ALL existing Kama Brain terminals to avoid stale sessions / port conflicts
+      const existingTerminals = vscode.window.terminals.filter(t => t.name === "Kama Brain");
+      for (const t of existingTerminals) { t.dispose(); }
+      // Wait for the old terminal's process to fully exit and release port (Windows needs more time)
+      await new Promise(r => setTimeout(r, existingTerminals.length > 0 ? 2000 : 200));
+
+      // ── Venv: isolate brain dependencies from system Python ─────
+      const venvDir = path.join(brainPath, ".venv");
+      const venvPython = isWin
+        ? path.join(venvDir, "Scripts", "python.exe")
+        : path.join(venvDir, "bin", "python");
+
+      // Create venv if it doesn't exist yet (first run)
+      if (!fs.existsSync(venvPython)) {
+        vscode.window.showInformationMessage("Kama: Setting up Python environment (first run)…");
+        try {
+          cp.execSync(`${pythonCmd} -m venv "${venvDir}"`, {
+            timeout: 60_000,
+            stdio: "pipe",
+            cwd: brainPath,
+          });
+        } catch (e) {
+          vscode.window.showErrorMessage(
+            `Kama: Failed to create Python venv. ${e instanceof Error ? e.message : String(e)}`
+          );
+          return;
+        }
+      }
+
+      const terminal = vscode.window.createTerminal({
+        name: "Kama Brain",
+        env: { "VIRTUAL_ENV": venvDir, "CONDA_PREFIX": "" },
+      });
+
       const cdCmd = isWin ? `cd "${brainPath}"` : `cd '${brainPath}'`;
-      // Check if deps are already installed before running pip install (much faster restart)
-      const depCheck = `${pythonCmd} -c "import fastapi, llama_cpp"`;
-      const pipInstall = `${pythonCmd} -m pip install -r requirements.txt --quiet`;
-      const startCmd = `${pythonCmd} sslm_engine.py`;
+      // Use the venv Python for all operations
+      // PowerShell needs & (call operator) to invoke a quoted path as a command
+      const qVenvPython = isWin ? `& "${venvPython}"` : `'${venvPython}'`;
+      // Check ALL critical imports - not just fastapi/llama_cpp.
+      // Missing starlette/pydantic/uvicorn was causing silent startup failures.
+      const depCheck = `${qVenvPython} -c "import fastapi, uvicorn, pydantic, starlette, psutil, dotenv, llama_cpp"`;
+      const pipInstall = `${qVenvPython} -m pip install --prefer-binary -r requirements.txt`;
+      const startCmd = `${qVenvPython} sslm_engine.py`;
+
+      // Version stamp: force reinstall when requirements.txt changes
+      // This ensures extension updates with new deps always get picked up.
+      const reqPath = path.join(brainPath, "requirements.txt");
+      const stampPath = path.join(venvDir, ".deps-stamp");
+      let needsInstall = false;
+      try {
+        const reqContent = fs.readFileSync(reqPath, "utf-8");
+        const currentStamp = reqContent.trim();
+        const savedStamp = fs.existsSync(stampPath) ? fs.readFileSync(stampPath, "utf-8").trim() : "";
+        if (currentStamp !== savedStamp) { needsInstall = true; }
+      } catch { needsInstall = true; }
+
+      // Write stamp update command (runs after successful pip install)
+      const writeStampCmd = isWin
+        ? `${qVenvPython} -c "import shutil,sys; open(r'${stampPath.replace(/'/g, "''")}','w').write(open(r'${reqPath.replace(/'/g, "''")}').read().strip())"`
+        : `${qVenvPython} -c "open('${stampPath}','w').write(open('${reqPath}').read().strip())"`;
+
       if (isWin) {
-        // PowerShell: check exit code properly - try/catch doesn't catch non-terminating errors
-        terminal.sendText(`${cdCmd} ; ${depCheck} 2>$null ; if ($LASTEXITCODE -ne 0) { ${pipInstall} } ; ${startCmd}`);
+        if (needsInstall) {
+          // Force install + stamp update
+          terminal.sendText(`${cdCmd} ; ${pipInstall} ; ${writeStampCmd} ; ${startCmd}`);
+        } else {
+          // Quick import check, install only if broken
+          terminal.sendText(`${cdCmd} ; ${depCheck} 2>$null ; if ($LASTEXITCODE -ne 0) { ${pipInstall} ; ${writeStampCmd} } ; ${startCmd}`);
+        }
       } else {
-        // Bash: short-circuit - only pip install if import fails
-        terminal.sendText(`${cdCmd} && (${depCheck} 2>/dev/null || ${pipInstall}) && ${startCmd}`);
+        if (needsInstall) {
+          terminal.sendText(`${cdCmd} && ${pipInstall} && ${writeStampCmd} && ${startCmd}`);
+        } else {
+          terminal.sendText(`${cdCmd} && (${depCheck} 2>/dev/null || (${pipInstall} && ${writeStampCmd})) && ${startCmd}`);
+        }
       }
       terminal.show(true); // Show terminal so user can see startup progress
       markBrainStarting();
@@ -227,7 +293,7 @@ export function activate(context: vscode.ExtensionContext): void {
           sidebarProvider.updateBrainStatus(false, true);
         } else {
           sidebarProvider.updateBrainStatus(false);
-          if (!_autoStarted && failCount >= 1) {
+        if (!_autoStarted && failCount >= MAX_FAILS) {
             _autoStarted = true;
             vscode.commands.executeCommand("kama.startBrain");
           }
@@ -239,7 +305,7 @@ export function activate(context: vscode.ExtensionContext): void {
         sidebarProvider.updateBrainStatus(false, true);
       } else {
         sidebarProvider.updateBrainStatus(false);
-        if (!_autoStarted && failCount >= 1) {
+        if (!_autoStarted && failCount >= MAX_FAILS) {
           _autoStarted = true;
           vscode.commands.executeCommand("kama.startBrain");
         }
@@ -252,6 +318,10 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push({ dispose: () => { if (_healthInterval) { clearInterval(_healthInterval); _healthInterval = null; } } });
 
   console.log("[Kama] Activated - 100% local mode.");
+  } catch (err) {
+    console.error("[Kama] Activation failed:", err);
+    vscode.window.showErrorMessage(`Kama activation failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 async function sendPromptToAgent(prompt: string): Promise<void> {
@@ -291,23 +361,25 @@ async function sendPromptToAgent(prompt: string): Promise<void> {
  * Checks appName first, then probes for IDE-specific commands.
  */
 async function detectIDE(): Promise<"cursor" | "windsurf" | "claude-code" | "copilot" | "vscode"> {
+  if (_cachedIDE) { return _cachedIDE; }
   const appName = vscode.env.appName.toLowerCase();
 
   // Direct name detection
-  if (appName.includes("cursor")) { return "cursor"; }
-  if (appName.includes("windsurf") || appName.includes("codeium") || appName.includes("antigravity")) { return "windsurf"; }
-  if (appName.includes("claude")) { return "claude-code"; }
+  if (appName.includes("cursor")) { _cachedIDE = "cursor"; return _cachedIDE; }
+  if (appName.includes("windsurf") || appName.includes("codeium") || appName.includes("antigravity")) { _cachedIDE = "windsurf"; return _cachedIDE; }
+  if (appName.includes("claude")) { _cachedIDE = "claude-code"; return _cachedIDE; }
 
   // Probe for IDE-specific commands
   const commands = await vscode.commands.getCommands(true);
   const cmdSet = new Set(commands);
 
-  if (cmdSet.has("composerMode.agent") || cmdSet.has("cursor.newComposer")) { return "cursor"; }
-  if (cmdSet.has("codeium.openChat") || cmdSet.has("windsurf.openChat")) { return "windsurf"; }
-  if (cmdSet.has("claude.newConversation") || cmdSet.has("claudeCode.startTask")) { return "claude-code"; }
-  if (cmdSet.has("github.copilot.chat.open") || cmdSet.has("workbench.action.chat.open")) { return "copilot"; }
+  if (cmdSet.has("composerMode.agent") || cmdSet.has("cursor.newComposer")) { _cachedIDE = "cursor"; return _cachedIDE; }
+  if (cmdSet.has("codeium.openChat") || cmdSet.has("windsurf.openChat")) { _cachedIDE = "windsurf"; return _cachedIDE; }
+  if (cmdSet.has("claude.newConversation") || cmdSet.has("claudeCode.startTask")) { _cachedIDE = "claude-code"; return _cachedIDE; }
+  if (cmdSet.has("github.copilot.chat.open") || cmdSet.has("workbench.action.chat.open")) { _cachedIDE = "copilot"; return _cachedIDE; }
 
-  return "vscode";
+  _cachedIDE = "vscode";
+  return _cachedIDE;
 }
 
 async function sendToCursor(prompt: string): Promise<void> {
@@ -385,6 +457,10 @@ function delay(ms: number): Promise<void> {
 
 export function deactivate(): void {
   if (_healthInterval) { clearInterval(_healthInterval); _healthInterval = null; }
+  _cachedIDE = null;
   brainClient?.abort();
+  // Kill brain terminal so the Python process doesn't linger after extension closes
+  const brainTerminals = vscode.window.terminals.filter(t => t.name === "Kama Brain");
+  for (const t of brainTerminals) { t.dispose(); }
   console.log("[Kama] Deactivated.");
 }

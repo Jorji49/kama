@@ -8,6 +8,7 @@ All agent guides / system prompts are injected at call-time - no external server
 from __future__ import annotations
 
 import atexit
+import hashlib
 import logging
 import os
 import threading
@@ -34,6 +35,7 @@ GGUF_CATALOG: list[dict] = [
         "size": "2.0 GB",
         "desc": "⭐ Best Pick - Fast, sharp, low RAM. Ideal for CPU.",
         "tier": "recommended",
+        "sha256": "6c1a2b41161032677be168d354123594c1e98e0f2681e4437918680e6e730a79",
     },
     {
         "id": "phi3.5-mini",
@@ -46,6 +48,7 @@ GGUF_CATALOG: list[dict] = [
         "size": "2.4 GB",
         "desc": "🧠 Microsoft 3.8B. Excellent structured prompt generation.",
         "tier": "quality",
+        "sha256": "d4ca5b0027610e40f8b2e7c77899e9253a03e35e6b9990e36355a9572c057032",
     },
     {
         "id": "llama3.2-1b",
@@ -58,6 +61,7 @@ GGUF_CATALOG: list[dict] = [
         "size": "1.3 GB",
         "desc": "⚡ Ultra-fast 1B. Minimal RAM. Instant responses.",
         "tier": "fast",
+        "sha256": "5e099bf825e8d031c864eafba4d048e65dea2ed27b24ea1c3ea43a1b8ad8a97c",
     },
     {
         "id": "gemma2-2b",
@@ -70,6 +74,7 @@ GGUF_CATALOG: list[dict] = [
         "size": "1.6 GB",
         "desc": "🔷 Google 2B. Great speed/quality balance.",
         "tier": "fast",
+        "sha256": "39ae4daa0bc9b1e1c35a4c81e2b7bac0e78652d3ab3535f0eeb4dbc78c806a24",
     },
 ]
 
@@ -79,6 +84,7 @@ _current_model_id: str = ""
 _load_lock = threading.Lock()
 
 # Setup/download progress - polled by /health
+_setup_lock = threading.Lock()
 _setup: dict = {
     "active": False,   # True while downloading
     "pct": 0,
@@ -88,9 +94,16 @@ _setup: dict = {
 }
 
 
+def _update_setup(**kwargs: object) -> None:
+    """Thread-safe update of _setup dict."""
+    with _setup_lock:
+        _setup.update(kwargs)
+
+
 def setup_state() -> dict:
-    """Return a snapshot of the current setup state."""
-    return dict(_setup)
+    """Return a thread-safe snapshot of the current setup state."""
+    with _setup_lock:
+        return dict(_setup)
 
 
 # ── Catalog helpers ───────────────────────────────────────────────────
@@ -167,7 +180,7 @@ def load_model(model_id: str) -> bool:
     global _llm, _current_model_id
     with _load_lock:
         try:
-            from llama_cpp import Llama  # deferred - optional install
+            from llama_cpp import Llama  # type: ignore[import-not-found]  # deferred - optional install
 
             p = model_file_path(model_id)
             if not p:
@@ -229,36 +242,24 @@ def auto_load() -> bool:
 
 def _auto_download_and_load(model_id: str) -> None:
     """Background thread: download then load a model, updating _setup state."""
-    global _setup
-    _setup["active"] = True
-    _setup["model_id"] = model_id
-    _setup["status"] = "downloading"
-    _setup["pct"] = 0
-    _setup["error"] = ""
+    _update_setup(active=True, model_id=model_id, status="downloading", pct=0, error="")
 
     def _progress(pct: int, status: str) -> None:
-        _setup["pct"] = pct
-        _setup["status"] = status
+        _update_setup(pct=pct, status=status)
 
     ok = download_model(model_id, _progress)
     if not ok:
-        _setup["status"] = "error"
-        _setup["error"] = f"Failed to download '{model_id}'"
-        _setup["active"] = False
+        _update_setup(status="error", error=f"Failed to download '{model_id}'", active=False)
         log.error("Auto-download failed for '%s'", model_id)
         return
 
-    _setup["status"] = "loading"
-    _setup["pct"] = 100
+    _update_setup(status="loading", pct=100)
     loaded = load_model(model_id)
     if loaded:
-        _setup["status"] = "done"
-        _setup["active"] = False
+        _update_setup(status="done", active=False)
         log.info("Auto-setup complete: model '%s' ready.", model_id)
     else:
-        _setup["status"] = "error"
-        _setup["error"] = f"Downloaded but failed to load '{model_id}'"
-        _setup["active"] = False
+        _update_setup(status="error", error=f"Downloaded but failed to load '{model_id}'", active=False)
 
 
 # ── Inference ─────────────────────────────────────────────────────────
@@ -269,9 +270,10 @@ def generate(
     temperature: float = 0.1,
 ) -> str:
     """Synchronous generation. Raises RuntimeError if no model is loaded."""
-    if _llm is None:
+    llm = _llm  # atomic copy — safe even if load_model() swaps _llm concurrently
+    if llm is None:
         raise RuntimeError("No model loaded - download and select a model first.")
-    resp = _llm.create_chat_completion(
+    resp = llm.create_chat_completion(
         messages=messages,
         max_tokens=max_tokens,
         temperature=temperature,
@@ -286,9 +288,10 @@ def generate_stream(
     temperature: float = 0.1,
 ) -> Generator[str, None, None]:
     """Streaming generation - yields text tokens as they arrive."""
-    if _llm is None:
+    llm = _llm  # atomic copy — safe even if load_model() swaps _llm concurrently
+    if llm is None:
         raise RuntimeError("No model loaded - download and select a model first.")
-    for chunk in _llm.create_chat_completion(
+    for chunk in llm.create_chat_completion(
         messages=messages,
         max_tokens=max_tokens,
         temperature=temperature,
@@ -324,6 +327,16 @@ def download_model(
 
     tmp = dest.with_suffix(".tmp")
     url = entry["url"]
+
+    # Validate URL: only allow downloads from trusted HuggingFace domain
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or parsed.hostname not in ("huggingface.co",):
+        log.error("Blocked download from untrusted domain: %s", parsed.hostname)
+        if progress_cb:
+            progress_cb(0, "error")
+        return False
+
     log.info("Downloading '%s' from HuggingFace …", model_id)
 
     try:
@@ -332,6 +345,7 @@ def download_model(
             total = int(resp.headers.get("Content-Length", 0))
             downloaded = 0
             chunk_size = 1_048_576  # 1 MB chunks
+            sha256 = hashlib.sha256()
 
             with open(tmp, "wb") as f:
                 while True:
@@ -339,12 +353,24 @@ def download_model(
                     if not data:
                         break
                     f.write(data)
+                    sha256.update(data)
                     downloaded += len(data)
                     if progress_cb and total > 0:
                         pct = min(99, int(downloaded / total * 100))
                         progress_cb(pct, "downloading")
 
-        tmp.rename(dest)
+        # Verify file integrity if checksum is available in catalog
+        expected_sha = entry.get("sha256")
+        if expected_sha:
+            actual_sha = sha256.hexdigest()
+            if actual_sha != expected_sha:
+                log.error("Checksum mismatch for '%s': expected %s, got %s", model_id, expected_sha, actual_sha)
+                tmp.unlink(missing_ok=True)
+                if progress_cb:
+                    progress_cb(0, "error")
+                return False
+
+        tmp.replace(dest)  # replace() is cross-platform safe (rename() fails on Windows if dest exists)
         if progress_cb:
             progress_cb(100, "done")
         log.info(

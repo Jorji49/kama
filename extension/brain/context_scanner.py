@@ -16,6 +16,7 @@ Design goals:
 
 from __future__ import annotations
 
+import html
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -47,25 +48,30 @@ class ProjectContext:
     languages_detected: list[str] = field(default_factory=list)
     total_files: int = 0
 
+    @staticmethod
+    def _esc_cdata(text: str) -> str:
+        """Escape CDATA terminator sequences so nested ]]> cannot break out."""
+        return text.replace("]]>", "]]]]><![CDATA[>")
+
     def to_xml(self) -> str:
         """Serialise the context into an XML fragment for prompt injection."""
         lines: list[str] = ['<project_context>']
 
-        # Root & language
+        # Root & language — escape attribute values to prevent XML injection
         langs_str = ", ".join(self.languages_detected) if self.languages_detected else (self.language_hint or "unknown")
-        lines.append(f'  <workspace root="{self.root}" language_hint="{self.language_hint or "unknown"}" languages="{langs_str}" />')
+        lines.append(f'  <workspace root="{html.escape(self.root, quote=True)}" language_hint="{html.escape(self.language_hint or "unknown", quote=True)}" languages="{html.escape(langs_str, quote=True)}" />')
         lines.append(f'  <total_files>{self.total_files}</total_files>')
 
         # File tree
         lines.append('  <file_tree>')
         for fp in self.file_tree:
-            lines.append(f'    <file>{fp}</file>')
+            lines.append(f'    <file>{html.escape(fp)}</file>')
         lines.append('  </file_tree>')
 
         # Manifest
         if self.manifest_content:
-            lines.append(f'  <manifest name="{self.manifest_name}">')
-            lines.append(f'    <![CDATA[{self.manifest_content}]]>')
+            lines.append(f'  <manifest name="{html.escape(self.manifest_name or "", quote=True)}">')
+            lines.append(f'    <![CDATA[{self._esc_cdata(self.manifest_content)}]]>')
             lines.append('  </manifest>')
 
         # Sampled file contents
@@ -73,8 +79,8 @@ class ProjectContext:
         if sampled:
             lines.append('  <sampled_files>')
             for f in sampled:
-                lines.append(f'    <file path="{f.relative_path}">')
-                lines.append(f'      <![CDATA[{f.content}]]>')
+                lines.append(f'    <file path="{html.escape(f.relative_path, quote=True)}">')
+                lines.append(f'      <![CDATA[{self._esc_cdata(f.content)}]]>')
                 lines.append('    </file>')
             lines.append('  </sampled_files>')
 
