@@ -22,7 +22,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 from config import settings
 
@@ -175,31 +174,4 @@ def audit_vibe(vibe: str, sampled_contents: str = "") -> AuditReport:
         report.verdict = Verdict.PASS
 
     return report
-
-
-# ── LEGACY COMPAT: keep old function name working ────────────────────────
-
-def audit_prompt(master_prompt: str) -> AuditReport:
-    """
-    Legacy wrapper - extracts the user vibe from the Master Prompt
-    and audits only that portion.
-
-    If the vibe can't be extracted, audits the full text with
-    structural tags stripped out.
-    """
-    # Try to extract just the vibe from the XML
-    vibe_match = re.search(
-        r"<vibe>\s*<!\[CDATA\[(.*?)\]\]>\s*</vibe>",
-        master_prompt,
-        re.S,
-    )
-    if vibe_match:
-        return audit_vibe(vibe_match.group(1))
-
-    # Fallback: strip all XML tags and audit the remaining text
-    stripped = re.sub(r"<[^>]+>", " ", master_prompt)
-    stripped = re.sub(r"<!\[CDATA\[|\]\]>", " ", stripped)
-    return audit_vibe(stripped)
-
-
 

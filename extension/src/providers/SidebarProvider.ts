@@ -154,8 +154,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  public updateBrainStatus(online: boolean, starting: boolean = false, setupPct: number = 0, setupModel: string = "", degraded: boolean = false): void {
-    this._post({ command: "status", online, starting, setupPct, setupModel, degraded });
+  public updateBrainStatus(online: boolean, starting: boolean = false, setupPct: number = 0, setupModel: string = ""): void {
+    this._post({ command: "status", online, starting, setupPct, setupModel });
     // When brain transitions from offline → online, auto-refresh model catalog and context (once)
     if (online && !this._wasOnline) {
       this._wasOnline = true;
@@ -280,7 +280,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       const cat = catalog.catalog?.length ? catalog.catalog : SidebarProvider.FALLBACK_CATALOG;
       this._post({ command: "allModels", installed: installed.models, current: installed.current, catalog: cat });
       // Load hardware asynchronously
-      this._loadHardware().catch(() => {});
+      this._loadHardware().catch(() => { });
     } catch {
       this._post({ command: "allModels", installed: [], current: "", catalog: SidebarProvider.FALLBACK_CATALOG });
     }
@@ -1117,7 +1117,6 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
     else if(m.command==='stopped'){finishStream();unlock()}
     else if(m.command==='loading'&&!m.on){finishStream();unlock()}
     else if(m.command==='status'){
-      var isSetup=m.starting&&m.setupPct>=0;
       if(m.online){
         // Connected
         D.className='dot on';
@@ -1153,16 +1152,6 @@ textarea:focus{border-color:var(--border2)}textarea::placeholder{color:var(--t4)
         $('bStartBrain').classList.add('starting');
         $('bStartBrain').disabled=true;
         $('bStartTxt').textContent='Starting…';
-      } else if(m.degraded){
-        // Brain is running but llama-cpp-python missing — template mode
-        D.className='dot';D.style.background='var(--blue)';
-        SL.textContent='Limited';
-        OB.classList.add('show');
-        $('OB_TITLE').textContent='Running in Template Mode';
-        $('OB_DESC').innerHTML='llama-cpp-python is not installed.<br/>Kama is using template-based prompt generation.<br/><br/><b>To enable AI generation:</b> Install Visual Studio Build Tools, then restart Brain.';
-        $('OB_PROG').style.display='none';
-        $('bStartBrain').style.display='none';
-        brainStarting=false;
       } else {
         D.className='dot off';
         SL.textContent='Offline';

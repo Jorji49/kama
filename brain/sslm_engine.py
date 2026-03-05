@@ -938,7 +938,7 @@ if __name__ == "__main__":
     # ProactorEventLoop (default on Windows) doesn't support
     # add_signal_handler(), which can cause uvicorn to miss shutdown
     # signals or exit immediately after startup.
-    if sys.platform == "win32":
+    if sys.platform == "win32" and sys.version_info < (3, 16):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     # ── Dependency self-check: fail fast with clear message ──────────

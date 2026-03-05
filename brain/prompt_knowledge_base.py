@@ -14,7 +14,7 @@ Source: https://prompts.chat/prompts?type=TEXT&category=cmj1yryoz0005t5albvxi3aw
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+
 
 
 # ══════════════════════════════════════════════════════════════════════

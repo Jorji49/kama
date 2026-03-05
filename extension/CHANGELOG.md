@@ -2,6 +2,15 @@
 
 All notable changes to Kama - AI Prompt Optimizer will be documented in this file.
 
+## [3.0.4] - 2026-03-05
+
+### Removed
+- **Dead code cleanup** — Removed legacy `audit_prompt()` wrapper, unused `to_xml()`/`_esc_cdata()` methods, dead `no_llama` health handler, `setupError` field, `degraded` UI parameter and handler, unused `isSetup` variable
+- **Unused imports** — Removed `Optional` from 3 Python files, `html` from context scanner
+
+### Fixed
+- **Python 3.16 deprecation** — `WindowsSelectorEventLoopPolicy` only applied on Python < 3.16 to suppress deprecation warning
+
 ## [3.0.3] - 2026-03-05
 
 ### Changed

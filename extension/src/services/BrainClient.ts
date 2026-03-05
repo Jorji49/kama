@@ -85,7 +85,6 @@ export interface HealthStatus {
   setup: boolean;        // brain is running but still setting up (downloading/loading model)
   setupPct: number;      // 0-100 download progress
   setupModel: string;    // model being downloaded
-  setupError: boolean;   // setup failed
   error: string;
 }
 
@@ -144,18 +143,15 @@ export class BrainClient {
       }>("GET", "/health", undefined, BrainClient.HEALTH_TIMEOUT_MS, baseOverride);
 
       if (res.status === "ok") {
-        return { ok: true, setup: false, setupPct: 100, setupModel: "", setupError: false, error: "" };
+        return { ok: true, setup: false, setupPct: 100, setupModel: "", error: "" };
       }
       if (res.status === "setup") {
-        return { ok: false, setup: true, setupPct: res.setup_pct ?? 0, setupModel: res.setup_model ?? "", setupError: false, error: "" };
+        return { ok: false, setup: true, setupPct: res.setup_pct ?? 0, setupModel: res.setup_model ?? "", error: "" };
       }
       if (res.status === "setup_error") {
-        return { ok: false, setup: false, setupPct: 0, setupModel: "", setupError: true, error: res.error ?? "Setup failed" };
+        return { ok: false, setup: false, setupPct: 0, setupModel: "", error: res.error ?? "Setup failed" };
       }
-      if (res.status === "no_llama") {
-        return { ok: false, setup: false, setupPct: 0, setupModel: "", setupError: true, error: res.error ?? "llama-cpp-python not installed — C/C++ compiler required." };
-      }
-      return { ok: false, setup: false, setupPct: 0, setupModel: "", setupError: false, error: "" };
+      return { ok: false, setup: false, setupPct: 0, setupModel: "", error: "" };
     };
 
     try {
@@ -174,7 +170,7 @@ export class BrainClient {
           }
         } catch { /* try next */ }
       }
-      return { ok: false, setup: false, setupPct: 0, setupModel: "", setupError: false, error: "unreachable" };
+      return { ok: false, setup: false, setupPct: 0, setupModel: "", error: "unreachable" };
     }
   }
 
